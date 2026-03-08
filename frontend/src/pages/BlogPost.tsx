@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getPost } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import type { Post } from "../types";
 import "./BlogPost.css";
 
@@ -10,6 +11,7 @@ export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState(false);
+  useDocumentTitle(post?.title);
 
   useEffect(() => {
     if (!slug) return;

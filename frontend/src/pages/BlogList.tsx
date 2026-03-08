@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPosts } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import type { Post } from "../types";
 import "./BlogList.css";
 
 export default function BlogList() {
+  useDocumentTitle("Blog");
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);

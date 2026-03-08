@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
+import About from "./pages/About";
+import Projects from "./pages/Projects";
+import Uses from "./pages/Uses";
 import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
 import Login from "./pages/Login";
@@ -17,6 +20,9 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/uses" element={<Uses />} />
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/admin/login" element={<Login onLogin={login} />} />

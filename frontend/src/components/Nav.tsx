@@ -5,10 +5,12 @@ export default function Nav() {
   return (
     <nav className="nav">
       <div className="nav__inner">
-        <Link to="/" className="nav__logo">Christopher R. Gonzalez</Link>
+        <Link to="/" className="nav__logo">CRG</Link>
         <div className="nav__links">
-          <Link to="/">Home</Link>
+          <Link to="/about">About</Link>
+          <Link to="/projects">Projects</Link>
           <Link to="/blog">Blog</Link>
+          <Link to="/uses">Uses</Link>
         </div>
       </div>
     </nav>

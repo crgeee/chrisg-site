@@ -38,6 +38,9 @@ def create_app(config_name=None):
     from .api.posts import posts_bp
     app.register_blueprint(posts_bp)
 
+    from .api.sitemap import sitemap_bp
+    app.register_blueprint(sitemap_bp)
+
     @app.cli.command("seed")
     def seed():
         """Create the admin user. Run with: flask seed"""

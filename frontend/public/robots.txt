@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chrisgonzalez.dev/sitemap.xml
