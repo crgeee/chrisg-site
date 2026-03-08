@@ -51,4 +51,18 @@ def create_app(config_name=None):
         db.session.commit()
         print("Admin user created. Username: admin")
 
+    # In production, serve the React frontend's built files.
+    import os
+    static_folder = os.path.join(app.root_path, "..", "static")
+    if os.path.exists(static_folder):
+        from flask import send_from_directory
+
+        @app.route("/", defaults={"path": ""})
+        @app.route("/<path:path>")
+        def serve_frontend(path):
+            file_path = os.path.join(static_folder, path)
+            if path and os.path.exists(file_path):
+                return send_from_directory(static_folder, path)
+            return send_from_directory(static_folder, "index.html")
+
     return app
