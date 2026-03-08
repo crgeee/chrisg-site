@@ -28,6 +28,8 @@ def create_app(config_name=None):
     jwt.init_app(app)
     cors.init_app(app)
 
-    # Register blueprints (API routes) -- added in later tasks
+    # Register blueprints (API routes)
+    from .api.health import health_bp
+    app.register_blueprint(health_bp)
 
     return app
