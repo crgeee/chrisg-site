@@ -6,10 +6,12 @@ export default function Contact() {
   useDocumentTitle("Contact");
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("sending");
+    setErrorMsg("");
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -20,9 +22,13 @@ export default function Contact() {
         setStatus("sent");
         setForm({ name: "", email: "", message: "" });
       } else {
+        const data = await res.json().catch(() => null);
+        setErrorMsg(data?.error || "Something went wrong. Please try again.");
         setStatus("error");
       }
-    } catch {
+    } catch (err) {
+      console.error("Contact form error:", err);
+      setErrorMsg("Network error. Please check your connection and try again.");
       setStatus("error");
     }
   };
@@ -74,7 +80,7 @@ export default function Contact() {
             />
           </div>
           {status === "error" && (
-            <p className="contact__error">Something went wrong. Please try again.</p>
+            <p className="contact__error">{errorMsg}</p>
           )}
           <button type="submit" disabled={status === "sending"} className="contact__submit">
             {status === "sending" ? "Sending..." : "Send message"}

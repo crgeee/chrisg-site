@@ -35,6 +35,7 @@
   --space-2xl: 10rem;
 
   /* Layout */
+  --nav-height: 52px;
   --max-width: 720px;
   --max-width-wide: 980px;
 

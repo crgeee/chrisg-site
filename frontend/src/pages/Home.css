@@ -6,8 +6,8 @@
   color: var(--color-dark-text);
   text-align: center;
   padding: var(--space-2xl) var(--space-md);
-  margin-top: -52px; /* overlap fixed nav — hero is dark like nav */
-  padding-top: calc(var(--space-2xl) + 52px);
+  margin-top: calc(-1 * var(--nav-height));
+  padding-top: calc(var(--space-2xl) + var(--nav-height));
   min-height: 100vh;
   display: flex;
   align-items: center;

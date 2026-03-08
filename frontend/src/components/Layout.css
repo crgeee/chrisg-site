@@ -6,7 +6,7 @@
 
 .layout__content {
   flex: 1;
-  padding-top: 52px; /* height of fixed nav */
+  padding-top: var(--nav-height);
 }
 
 .layout__footer {
