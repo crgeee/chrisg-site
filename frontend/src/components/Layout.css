@@ -6,12 +6,14 @@
 
 .layout__content {
   flex: 1;
+  padding-top: 52px; /* height of fixed nav */
 }
 
 .layout__footer {
-  padding: var(--space-md) 0;
-  border-top: 1px solid var(--color-border-light);
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  padding: var(--space-sm) 0;
+  background: var(--color-dark-bg);
+  color: var(--color-dark-text-secondary);
+  font-size: 0.75rem;
   text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }

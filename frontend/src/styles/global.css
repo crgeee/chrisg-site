@@ -1,20 +1,26 @@
 /*
- * Modern Apple-inspired design system.
- * System font stack, generous whitespace, refined typography.
- * Inspired by apple.com 2025-2026 aesthetic.
+ * Modern Apple-inspired design system (2026).
+ * Dark hero, dramatic typography, generous whitespace.
+ * No CSS framework — custom properties and vanilla CSS only.
  */
 
 :root {
-  /* Colors */
+  /* Light palette */
   --color-text: #1d1d1f;
   --color-text-secondary: #86868b;
   --color-bg: #fbfbfd;
   --color-bg-secondary: #f5f5f7;
   --color-bg-elevated: #ffffff;
-  --color-accent: #0071e3;
-  --color-accent-hover: #0077ed;
+  --color-accent: #2997ff;
+  --color-accent-hover: #4db3ff;
   --color-border: #d2d2d7;
-  --color-border-light: #e8e8ed;
+  --color-border-light: rgba(0, 0, 0, 0.06);
+
+  /* Dark palette */
+  --color-dark-bg: #000000;
+  --color-dark-bg-elevated: #1c1c1e;
+  --color-dark-text: #f5f5f7;
+  --color-dark-text-secondary: #86868b;
 
   /* Typography */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -26,14 +32,15 @@
   --space-md: 2rem;
   --space-lg: 4rem;
   --space-xl: 6rem;
-  --space-2xl: 8rem;
+  --space-2xl: 10rem;
 
   /* Layout */
   --max-width: 720px;
   --max-width-wide: 980px;
 
-  /* Transitions */
+  /* Motion */
   --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --duration: 0.3s;
 }
 
@@ -51,7 +58,7 @@ body {
   font-family: var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);
-  line-height: 1.6;
+  line-height: 1.47;
 }
 
 /* Links */
@@ -65,16 +72,18 @@ a:hover { color: var(--color-accent-hover); }
 
 /* Selection */
 ::selection {
-  background: rgba(0, 113, 227, 0.15);
+  background: rgba(41, 151, 255, 0.2);
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(16px); }
+/* Scroll-reveal animation */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-in { animation: fadeIn 0.6s var(--ease-out); }
+.fade-in {
+  animation: revealUp 0.8s var(--ease-spring) both;
+}
 
 /* Layout containers */
 .container {
@@ -89,16 +98,34 @@ a:hover { color: var(--color-accent-hover); }
   padding: 0 var(--space-md);
 }
 
+/* Shared page heading styles */
+.page-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.page-intro {
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+  margin-top: var(--space-xs);
+  margin-bottom: var(--space-lg);
+  line-height: 1.5;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   :root {
     --space-lg: 2.5rem;
     --space-xl: 4rem;
-    --space-2xl: 5rem;
+    --space-2xl: 6rem;
   }
 
   .container,
   .container--wide {
     padding: 0 var(--space-sm);
   }
+
+  .page-title { font-size: 1.75rem; }
 }

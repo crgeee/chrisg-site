@@ -1,9 +1,40 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { FiGithub, FiLinkedin, FiSend } from "react-icons/fi";
 import { getPosts } from "../services/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import type { Post } from "../types";
 import "./Home.css";
+
+const FEATURED_PROJECTS = [
+  {
+    name: "reps.sh",
+    url: "https://reps.sh",
+    tag: "Live",
+    description: "Task tracker with built-in spaced repetition and AI-powered interview coaching. Used by developers preparing for technical interviews.",
+    tech: "React \u00B7 TypeScript \u00B7 Python",
+  },
+  {
+    name: "alphascan.ai",
+    url: "https://alphascan.ai",
+    tag: "Live",
+    description: "AI-powered market intelligence platform that surfaces actionable insights from financial data and news sources.",
+    tech: "React \u00B7 Python \u00B7 AI/ML",
+  },
+  {
+    name: "App Store Toolkit",
+    url: "https://github.com/crgeee/apple-appstore-toolkit",
+    tag: "Open Source",
+    description: "Claude Code plugin with 8 AI agents for automated App Store readiness reviews of iOS apps.",
+    tech: "Claude Code \u00B7 AI Agents \u00B7 iOS",
+  },
+];
+
+const SOCIAL_LINKS = [
+  { href: "https://linkedin.com/in/crgee", icon: FiLinkedin, label: "LinkedIn" },
+  { href: "https://github.com/crgeee", icon: FiGithub, label: "GitHub" },
+  { href: "/contact", icon: FiSend, label: "Contact" },
+];
 
 export default function Home() {
   const [recentPosts, setRecentPosts] = useState<Post[]>([]);
@@ -16,36 +47,48 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="home fade-in">
-      {/* Hero */}
+    <div className="home">
+      {/* Dark Hero */}
       <section className="home__hero">
-        <div className="container">
+        <div className="home__hero-inner">
           <p className="home__label">Staff Software Engineer</p>
-          <h1 className="home__name">Christopher R. Gonzalez</h1>
+          <h1 className="home__name">Christopher R.<br />Gonzalez</h1>
           <p className="home__tagline">
             I build platforms that scale to tens of millions of users.
             Currently leading UI Platform at Intuit TurboTax.
           </p>
           <div className="home__cta">
             <Link to="/projects" className="home__btn home__btn--primary">See my work</Link>
-            <Link to="/blog" className="home__btn home__btn--secondary">Read the blog</Link>
+            <Link to="/blog" className="home__btn home__btn--ghost">Read the blog</Link>
+          </div>
+          <div className="home__hero-social">
+            {SOCIAL_LINKS.map(({ href, icon: Icon, label }) => (
+              href.startsWith("/") ? (
+                <Link key={label} to={href} aria-label={label}><Icon size={20} /></Link>
+              ) : (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}><Icon size={20} /></a>
+              )
+            ))}
           </div>
         </div>
       </section>
 
-      {/* What I Do */}
+      {/* What I Do — dark section */}
       <section className="home__skills">
-        <div className="container">
+        <div className="container--wide">
           <div className="home__skills-grid">
             <div className="home__skill-card">
+              <span className="home__skill-number">01</span>
               <h3>Full-Stack Development</h3>
               <p>Python, Flask, React, TypeScript. End-to-end ownership from database schema to pixel-perfect UI.</p>
             </div>
             <div className="home__skill-card">
+              <span className="home__skill-number">02</span>
               <h3>Platform Engineering</h3>
               <p>Building internal tools and infrastructure that make entire engineering teams more productive.</p>
             </div>
             <div className="home__skill-card">
+              <span className="home__skill-number">03</span>
               <h3>Engineering Leadership</h3>
               <p>Technical strategy, architecture reviews, and mentoring engineers across a $4B revenue product.</p>
             </div>
@@ -55,28 +98,18 @@ export default function Home() {
 
       {/* Featured Projects */}
       <section className="home__projects">
-        <div className="container">
-          <h2>Projects</h2>
+        <div className="container--wide">
+          <h2 className="home__section-title">Featured Projects</h2>
           <p className="home__section-desc">Things I've built outside of work</p>
           <div className="home__project-grid">
-            <a href="https://reps.sh" target="_blank" rel="noopener noreferrer" className="home__project-card">
-              <span className="home__project-tag">Live</span>
-              <h3>reps.sh</h3>
-              <p>Task tracker with built-in spaced repetition and AI-powered interview coaching. Used by developers preparing for technical interviews.</p>
-              <span className="home__project-tech">React &middot; TypeScript &middot; Python</span>
-            </a>
-            <a href="https://alphascan.ai" target="_blank" rel="noopener noreferrer" className="home__project-card">
-              <span className="home__project-tag">Live</span>
-              <h3>alphascan.ai</h3>
-              <p>AI-powered market intelligence platform that surfaces actionable insights from financial data and news sources.</p>
-              <span className="home__project-tech">React &middot; Python &middot; AI/ML</span>
-            </a>
-            <a href="https://github.com/crgeee/apple-appstore-toolkit" target="_blank" rel="noopener noreferrer" className="home__project-card">
-              <span className="home__project-tag">Open Source</span>
-              <h3>App Store Toolkit</h3>
-              <p>Claude Code plugin with 8 AI agents for automated App Store readiness reviews of iOS apps.</p>
-              <span className="home__project-tech">Claude Code &middot; AI Agents &middot; iOS</span>
-            </a>
+            {FEATURED_PROJECTS.map((project) => (
+              <a key={project.name} href={project.url} target="_blank" rel="noopener noreferrer" className="home__project-card">
+                <span className="home__project-tag">{project.tag}</span>
+                <h3>{project.name}</h3>
+                <p>{project.description}</p>
+                <span className="home__project-tech">{project.tech}</span>
+              </a>
+            ))}
           </div>
           <Link to="/projects" className="home__view-all">All projects &rarr;</Link>
         </div>
@@ -86,7 +119,7 @@ export default function Home() {
       {recentPosts.length > 0 && (
         <section className="home__posts">
           <div className="container">
-            <h2>Recent Writing</h2>
+            <h2 className="home__section-title">Recent Writing</h2>
             <p className="home__section-desc">Thoughts on engineering, career, and building things</p>
             <div className="home__post-list">
               {recentPosts.map((post) => (
@@ -104,15 +137,25 @@ export default function Home() {
         </section>
       )}
 
-      {/* Connect */}
+      {/* Connect — dark */}
       <section className="home__connect">
         <div className="container">
           <h2>Get in touch</h2>
-          <p>I'm always open to interesting conversations and collaborations.</p>
-          <div className="home__links">
-            <a href="https://linkedin.com/in/crgee" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-            <a href="https://github.com/crgeee" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="mailto:crg167@gmail.com">Email</a>
+          <p>Always open to interesting conversations and collaborations.</p>
+          <div className="home__connect-links">
+            {SOCIAL_LINKS.map(({ href, icon: Icon, label }) => (
+              href.startsWith("/") ? (
+                <Link key={label} to={href} className="home__connect-link">
+                  <Icon size={24} />
+                  <span>{label}</span>
+                </Link>
+              ) : (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" className="home__connect-link">
+                  <Icon size={24} />
+                  <span>{label}</span>
+                </a>
+              )
+            ))}
           </div>
         </div>
       </section>

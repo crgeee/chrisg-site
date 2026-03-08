@@ -5,6 +5,7 @@ const projects = [
   {
     name: "reps.sh",
     url: "https://reps.sh",
+    image: "/images/reps-sh.png",
     status: "Live" as const,
     description:
       "Task tracker with built-in spaced repetition and AI-powered interview coaching. Helps developers prepare for technical interviews by scheduling review sessions using the SM-2 algorithm.",
@@ -18,6 +19,7 @@ const projects = [
   {
     name: "alphascan.ai",
     url: "https://alphascan.ai",
+    image: "/images/alphascan-ai.png",
     status: "Live" as const,
     description:
       "AI-powered market intelligence platform that analyzes financial data and news to surface actionable insights for investors and analysts.",
@@ -31,6 +33,7 @@ const projects = [
   {
     name: "Find My Value",
     url: null,
+    image: null,
     status: "In Progress" as const,
     description:
       "Salary benchmarking tool that helps software engineers understand their market worth. Aggregates compensation data and provides personalized salary insights based on role, location, and experience.",
@@ -44,6 +47,7 @@ const projects = [
   {
     name: "Apple App Store Toolkit",
     url: "https://github.com/crgeee/apple-appstore-toolkit",
+    image: "/images/appstore-toolkit.png",
     status: "Live" as const,
     description:
       "Claude Code plugin for App Store readiness reviews. Uses 8 specialized AI agents to review React Native and Swift iOS apps against Apple's guidelines before submission.",
@@ -57,6 +61,7 @@ const projects = [
   {
     name: "Google Play Store Toolkit",
     url: "https://github.com/crgeee/google-playstore-toolkit",
+    image: null,
     status: "Live" as const,
     description:
       "Claude Code plugin for Google Play Store readiness reviews. 8 specialized agents review Android, React Native, and Expo apps for Play Store compliance.",
@@ -70,6 +75,7 @@ const projects = [
   {
     name: "UI Component Library",
     url: "https://github.com/crgeee/ui",
+    image: null,
     status: "Live" as const,
     description:
       "Dark-first React component library built with Tailwind CSS v4. A reusable set of components for rapid UI development across projects.",
@@ -83,6 +89,7 @@ const projects = [
   {
     name: "chrisgonzalez.dev",
     url: "https://chrisgonzalez.dev",
+    image: "/images/chrisgonzalez-dev.png",
     status: "Live" as const,
     description:
       "This site. A full-stack Flask + React application with a blog CMS, JWT authentication, and automated CI/CD deployment. Built to demonstrate production-grade fullstack engineering.",
@@ -100,14 +107,19 @@ export default function Projects() {
 
   return (
     <div className="projects container fade-in">
-      <h1>Projects</h1>
-      <p className="projects__intro">
+      <h1 className="page-title">Projects</h1>
+      <p className="page-intro">
         Things I build to explore ideas, learn new tech, and solve real problems.
       </p>
 
       <div className="projects__list">
         {projects.map((project) => (
           <article key={project.name} className="projects__card">
+            {project.image && (
+              <div className="projects__image">
+                <img src={project.image} alt={`${project.name} screenshot`} loading="lazy" />
+              </div>
+            )}
             <div className="projects__card-header">
               <div>
                 <span className={`projects__status ${project.status === "In Progress" ? "projects__status--wip" : ""}`}>
@@ -116,7 +128,7 @@ export default function Projects() {
                 <h2>
                   {project.url ? (
                     <a href={project.url} target="_blank" rel="noopener noreferrer">
-                      {project.name} &nearr;
+                      {project.name} &#8599;
                     </a>
                   ) : (
                     project.name

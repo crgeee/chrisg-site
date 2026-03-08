@@ -43,8 +43,8 @@ export default function Uses() {
 
   return (
     <div className="uses container fade-in">
-      <h1>Uses</h1>
-      <p className="uses__intro">
+      <h1 className="page-title">Uses</h1>
+      <p className="page-intro">
         Tools, software, and hardware I use for development. Updated for 2026.
       </p>
 

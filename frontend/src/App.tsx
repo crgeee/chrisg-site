@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import Projects from "./pages/Projects";
 import Uses from "./pages/Uses";
+import Contact from "./pages/Contact";
 import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
 import Login from "./pages/Login";
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/uses" element={<Uses />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/admin/login" element={<Login onLogin={login} />} />

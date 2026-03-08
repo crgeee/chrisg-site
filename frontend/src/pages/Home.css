@@ -1,37 +1,51 @@
-/* Hero */
+/* ============================================
+   DARK HERO — Apple product page style
+   ============================================ */
 .home__hero {
-  padding: var(--space-2xl) 0 var(--space-xl);
+  background: var(--color-dark-bg);
+  color: var(--color-dark-text);
   text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  margin-top: -52px; /* overlap fixed nav — hero is dark like nav */
+  padding-top: calc(var(--space-2xl) + 52px);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home__hero-inner {
+  max-width: 680px;
 }
 
 .home__label {
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.15em;
   color: var(--color-accent);
   margin-bottom: var(--space-sm);
+  animation: revealUp 0.8s var(--ease-spring) 0.1s both;
 }
 
 .home__name {
-  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-size: clamp(3rem, 8vw, 5.5rem);
   font-weight: 700;
   letter-spacing: -0.04em;
-  line-height: 1.05;
-  background: linear-gradient(135deg, var(--color-text) 0%, #6e6e73 100%);
+  line-height: 1.0;
+  background: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: revealUp 0.8s var(--ease-spring) 0.2s both;
 }
 
 .home__tagline {
-  font-size: 1.25rem;
-  color: var(--color-text-secondary);
-  margin-top: var(--space-sm);
-  max-width: 480px;
-  margin-left: auto;
-  margin-right: auto;
+  font-size: 1.2rem;
+  color: var(--color-dark-text-secondary);
+  margin-top: var(--space-md);
   line-height: 1.5;
+  animation: revealUp 0.8s var(--ease-spring) 0.3s both;
 }
 
 .home__cta {
@@ -39,11 +53,12 @@
   gap: 0.75rem;
   justify-content: center;
   margin-top: var(--space-md);
+  animation: revealUp 0.8s var(--ease-spring) 0.4s both;
 }
 
 .home__btn {
   display: inline-block;
-  padding: 0.75rem 1.5rem;
+  padding: 0.8rem 1.75rem;
   border-radius: 980px;
   font-size: 0.9rem;
   font-weight: 500;
@@ -58,61 +73,90 @@
 .home__btn--primary:hover {
   background: var(--color-accent-hover);
   color: #fff;
-  transform: scale(1.02);
+  transform: scale(1.04);
 }
 
-.home__btn--secondary {
+.home__btn--ghost {
   background: transparent;
   color: var(--color-accent);
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.home__btn--secondary:hover {
-  background: var(--color-bg-secondary);
-  color: var(--color-accent);
+.home__btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-accent-hover);
 }
 
-/* Skills */
+.home__hero-social {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-top: var(--space-lg);
+  animation: revealUp 0.8s var(--ease-spring) 0.5s both;
+}
+
+.home__hero-social a {
+  color: var(--color-dark-text-secondary);
+  transition: color var(--duration) var(--ease-out), transform var(--duration) var(--ease-out);
+}
+
+.home__hero-social a:hover {
+  color: #ffffff;
+  transform: scale(1.15);
+}
+
+/* ============================================
+   SKILLS — dark section with numbered cards
+   ============================================ */
 .home__skills {
   padding: var(--space-xl) 0;
-  background: var(--color-bg-secondary);
-  border-top: 1px solid var(--color-border-light);
-  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-dark-bg-elevated);
+  color: var(--color-dark-text);
 }
 
 .home__skills-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 .home__skill-card {
   padding: var(--space-sm) 0;
 }
 
+.home__skill-number {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-sm);
+}
+
 .home__skill-card h3 {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+  color: var(--color-dark-text);
 }
 
 .home__skill-card p {
-  color: var(--color-text-secondary);
+  color: var(--color-dark-text-secondary);
   font-size: 0.9rem;
   line-height: 1.55;
 }
 
-/* Projects */
+/* ============================================
+   PROJECTS — light section
+   ============================================ */
 .home__projects {
   padding: var(--space-xl) 0;
 }
 
-.home__projects h2,
-.home__posts h2,
-.home__connect h2 {
-  font-size: 1.5rem;
+.home__section-title {
+  font-size: 1.75rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 .home__section-desc {
@@ -132,18 +176,17 @@
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
-  border: 1px solid var(--color-border-light);
-  border-radius: 16px;
+  border-radius: 20px;
   color: var(--color-text);
   background: var(--color-bg-elevated);
-  transition: all var(--duration) var(--ease-out);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: all var(--duration) var(--ease-spring);
 }
 
 .home__project-card:hover {
-  border-color: var(--color-border);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   color: var(--color-text);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 
 .home__project-tag {
@@ -155,12 +198,8 @@
   margin-bottom: 0.75rem;
 }
 
-.home__project-tag--wip {
-  color: var(--color-accent);
-}
-
 .home__project-card h3 {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -182,12 +221,12 @@
   border-top: 1px solid var(--color-border-light);
 }
 
-/* Posts */
+/* ============================================
+   POSTS — light gray section
+   ============================================ */
 .home__posts {
   padding: var(--space-xl) 0;
   background: var(--color-bg-secondary);
-  border-top: 1px solid var(--color-border-light);
-  border-bottom: 1px solid var(--color-border-light);
 }
 
 .home__post-list {
@@ -199,15 +238,16 @@
 .home__post-card {
   display: block;
   padding: 1.25rem 1.5rem;
-  border-radius: 12px;
+  border-radius: 16px;
   color: var(--color-text);
   background: var(--color-bg-elevated);
-  transition: box-shadow var(--duration) var(--ease-out);
+  transition: all var(--duration) var(--ease-spring);
 }
 
 .home__post-card:hover {
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   color: var(--color-text);
+  transform: translateY(-1px);
 }
 
 .home__post-card time {
@@ -229,23 +269,48 @@
   font-size: 0.875rem;
 }
 
-/* Connect */
+/* ============================================
+   CONNECT — dark section with icon links
+   ============================================ */
 .home__connect {
   padding: var(--space-xl) 0;
   text-align: center;
+  background: var(--color-dark-bg);
+  color: var(--color-dark-text);
+}
+
+.home__connect h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .home__connect p {
-  color: var(--color-text-secondary);
-  margin-top: 0.25rem;
-  font-size: 0.95rem;
+  color: var(--color-dark-text-secondary);
+  margin-top: 0.5rem;
+  font-size: 1rem;
 }
 
-.home__links {
+.home__connect-links {
   display: flex;
-  gap: var(--space-md);
+  gap: var(--space-lg);
   justify-content: center;
   margin-top: var(--space-md);
+}
+
+.home__connect-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-dark-text-secondary);
+  font-size: 0.85rem;
+  transition: color var(--duration) var(--ease-out), transform var(--duration) var(--ease-out);
+}
+
+.home__connect-link:hover {
+  color: #ffffff;
+  transform: translateY(-2px);
 }
 
 .home__view-all {
@@ -255,11 +320,14 @@
   font-weight: 500;
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 640px) {
-  .home__hero { padding: var(--space-xl) 0 var(--space-lg); }
-  .home__tagline { font-size: 1.05rem; }
+  .home__hero { min-height: 70vh; padding: var(--space-xl) var(--space-sm); }
+  .home__tagline { font-size: 1rem; }
   .home__cta { flex-direction: column; align-items: center; }
-  .home__skills-grid { grid-template-columns: 1fr; gap: var(--space-sm); }
+  .home__skills-grid { grid-template-columns: 1fr; gap: var(--space-md); }
   .home__project-grid { grid-template-columns: 1fr; }
+  .home__connect-links { gap: var(--space-md); }
 }

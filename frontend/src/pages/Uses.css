@@ -1,15 +1,4 @@
-.uses h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.uses__intro {
-  color: var(--color-text-secondary);
-  font-size: 1.1rem;
-  margin-top: var(--space-xs);
-  margin-bottom: var(--space-lg);
-}
+.uses { padding-top: var(--space-lg); }
 
 .uses__section {
   padding: var(--space-lg) 0;
@@ -49,6 +38,3 @@
   margin-top: 0.25rem;
 }
 
-@media (max-width: 640px) {
-  .uses h1 { font-size: 1.75rem; }
-}

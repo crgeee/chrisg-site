@@ -6,7 +6,7 @@ export default function About() {
 
   return (
     <div className="about container fade-in">
-      <h1>About Me</h1>
+      <h1 className="page-title">About Me</h1>
 
       <section className="about__intro">
         <p>
@@ -60,7 +60,7 @@ export default function About() {
           I'm always interested in talking about engineering, career growth, or interesting problems.
           Find me on <a href="https://linkedin.com/in/crgee" target="_blank" rel="noopener noreferrer">LinkedIn</a>,
           <a href="https://github.com/crgeee" target="_blank" rel="noopener noreferrer"> GitHub</a>,
-          or <a href="mailto:crg167@gmail.com">send me an email</a>.
+          or <a href="/contact">use the contact form</a>.
         </p>
       </section>
     </div>
