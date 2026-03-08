@@ -33,7 +33,7 @@
 
 .uses__item:hover {
   border-color: var(--color-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px var(--color-border-light);
 }
 
 .uses__item-icon {
