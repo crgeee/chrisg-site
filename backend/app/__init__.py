@@ -38,4 +38,17 @@ def create_app(config_name=None):
     from .api.posts import posts_bp
     app.register_blueprint(posts_bp)
 
+    @app.cli.command("seed")
+    def seed():
+        """Create the admin user. Run with: flask seed"""
+        from .models.user import User
+        if User.query.filter_by(username="admin").first():
+            print("Admin user already exists.")
+            return
+        user = User(username="admin", email="crg167@gmail.com")
+        user.set_password("changeme")  # Change this immediately after first login
+        db.session.add(user)
+        db.session.commit()
+        print("Admin user created. Username: admin")
+
     return app
