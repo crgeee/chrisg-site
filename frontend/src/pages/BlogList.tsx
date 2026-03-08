@@ -11,12 +11,17 @@ export default function BlogList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     setLoading(true);
+    setError(false);
     getPosts(page).then((data) => {
       setPosts(data.posts);
       setTotalPages(data.pages);
+    }).catch((err) => {
+      console.error("Failed to load posts:", err);
+      setError(true);
     }).finally(() => setLoading(false));
   }, [page]);
 
@@ -25,6 +30,8 @@ export default function BlogList() {
       <h1>Blog</h1>
       {loading ? (
         <p className="blog-list__loading">Loading...</p>
+      ) : error ? (
+        <p className="blog-list__empty">Failed to load posts. Please try again later.</p>
       ) : posts.length === 0 ? (
         <p className="blog-list__empty">No posts yet. Check back soon.</p>
       ) : (

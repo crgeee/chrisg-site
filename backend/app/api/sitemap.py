@@ -1,5 +1,9 @@
+import logging
+
 from flask import Blueprint, Response
 from ..models.post import Post
+
+logger = logging.getLogger(__name__)
 
 sitemap_bp = Blueprint("sitemap", __name__)
 
@@ -33,12 +37,15 @@ def sitemap():
         for page in STATIC_PAGES
     ]
 
-    posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).all()
-    for post in posts:
-        lastmod = (post.updated_at or post.created_at).strftime("%Y-%m-%d")
-        urls.append(
-            _url_entry(f"{BASE_URL}/blog/{post.slug}", "monthly", "0.7", lastmod)
-        )
+    try:
+        posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).all()
+        for post in posts:
+            lastmod = (post.updated_at or post.created_at).strftime("%Y-%m-%d")
+            urls.append(
+                _url_entry(f"{BASE_URL}/blog/{post.slug}", "monthly", "0.7", lastmod)
+            )
+    except Exception:
+        logger.exception("Failed to query posts for sitemap, serving static-only sitemap")
 
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'

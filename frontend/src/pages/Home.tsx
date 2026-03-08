@@ -43,7 +43,9 @@ export default function Home() {
   useEffect(() => {
     getPosts(1).then((data) => {
       setRecentPosts(data.posts.slice(0, 3));
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error("Failed to load recent posts:", err);
+    });
   }, []);
 
   return (

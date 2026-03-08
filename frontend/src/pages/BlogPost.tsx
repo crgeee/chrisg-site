@@ -17,7 +17,10 @@ export default function BlogPost() {
     if (!slug) return;
     getPost(slug)
       .then(setPost)
-      .catch(() => setError(true));
+      .catch((err) => {
+        console.error(`Failed to load post "${slug}":`, err);
+        setError(true);
+      });
   }, [slug]);
 
   if (error) {
