@@ -32,4 +32,7 @@ def create_app(config_name=None):
     from .api.health import health_bp
     app.register_blueprint(health_bp)
 
+    from .api.auth import auth_bp
+    app.register_blueprint(auth_bp)
+
     return app
