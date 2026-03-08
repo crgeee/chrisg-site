@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { isAuthenticated, getMe, login as apiLogin, clearTokens } from "../services/api";
+import { isAuthenticated, getMe, login as apiLogin, logout as apiLogout } from "../services/api";
 import type { User } from "../types";
 
 export function useAuth() {
@@ -20,8 +20,8 @@ export function useAuth() {
     setUser(me);
   }
 
-  function logout() {
-    clearTokens();
+  async function logout() {
+    await apiLogout();
     setUser(null);
   }
 

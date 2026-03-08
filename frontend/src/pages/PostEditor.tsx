@@ -54,13 +54,13 @@ export default function PostEditor() {
           <label>Content (Markdown)<textarea value={content} onChange={(e) => setContent(e.target.value)} rows={20} required /></label>
           <label className="editor__checkbox"><input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />Published</label>
           <div className="editor__buttons">
-            <button type="submit" className="admin__btn admin__btn--primary" disabled={saving}>{saving ? "Saving..." : isEditing ? "Update" : "Create"}</button>
-            <button type="button" className="admin__btn" onClick={() => navigate("/admin")}>Cancel</button>
+            <button type="submit" className="editor__btn editor__btn--primary" disabled={saving}>{saving ? "Saving..." : isEditing ? "Update" : "Create"}</button>
+            <button type="button" className="editor__btn" onClick={() => navigate("/admin")}>Cancel</button>
           </div>
         </form>
         <div className="editor__preview">
           <h2>Preview</h2>
-          <div className="blog-post__content">
+          <div className="editor__preview-content">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || "*Start writing to see preview...*"}</ReactMarkdown>
           </div>
         </div>

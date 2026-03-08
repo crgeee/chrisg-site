@@ -5,12 +5,25 @@
   display: block; width: 100%; padding: 0.6rem 0.8rem; margin-top: var(--space-xs);
   border: 1px solid var(--color-border); border-radius: 8px;
   font-family: var(--font-sans); font-size: 1rem;
+  background: var(--color-bg-elevated); color: var(--color-text);
 }
 .editor__form textarea { font-family: var(--font-mono); font-size: 0.9rem; resize: vertical; }
-.editor__form input:focus, .editor__form textarea:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15); }
+.editor__form input:focus, .editor__form textarea:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-focus-ring); }
 .editor__checkbox { display: flex !important; flex-direction: row !important; align-items: center; gap: var(--space-xs); }
 .editor__checkbox input { width: auto !important; }
 .editor__buttons { display: flex; gap: var(--space-sm); margin-top: var(--space-sm); }
+.editor__btn {
+  padding: 0.5rem 1rem; border: 1px solid var(--color-border); border-radius: 8px;
+  background: var(--color-bg); font-family: var(--font-sans); font-size: 0.9rem;
+  cursor: pointer; text-decoration: none; color: var(--color-text);
+}
+.editor__btn--primary { background: var(--color-accent); color: white; border-color: var(--color-accent); }
 .editor__preview { border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-sm); max-height: 80vh; overflow-y: auto; }
 .editor__preview h2 { font-size: 0.9rem; font-weight: 500; color: var(--color-text-secondary); margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); }
+.editor__preview-content { font-size: 0.95rem; line-height: 1.6; }
+.editor__preview-content h1, .editor__preview-content h2, .editor__preview-content h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+.editor__preview-content p { margin-bottom: 1em; }
+.editor__preview-content code { font-family: var(--font-mono); font-size: 0.9em; background: var(--color-bg-secondary); padding: 0.15em 0.4em; border-radius: 4px; }
+.editor__preview-content pre { background: var(--color-bg-secondary); padding: var(--space-sm); border-radius: 8px; overflow-x: auto; margin-bottom: 1em; }
+.editor__preview-content pre code { background: none; padding: 0; }
 @media (max-width: 768px) { .editor__layout { grid-template-columns: 1fr; } }

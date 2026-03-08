@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { sendContactForm } from "../services/api";
 import "./Contact.css";
 
 export default function Contact() {
@@ -13,22 +14,12 @@ export default function Contact() {
     setStatus("sending");
     setErrorMsg("");
     try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (res.ok) {
-        setStatus("sent");
-        setForm({ name: "", email: "", message: "" });
-      } else {
-        const data = await res.json().catch(() => null);
-        setErrorMsg(data?.error || "Something went wrong. Please try again.");
-        setStatus("error");
-      }
+      await sendContactForm(form);
+      setStatus("sent");
+      setForm({ name: "", email: "", message: "" });
     } catch (err) {
-      console.error("Contact form error:", err);
-      setErrorMsg("Network error. Please check your connection and try again.");
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setErrorMsg(message);
       setStatus("error");
     }
   };

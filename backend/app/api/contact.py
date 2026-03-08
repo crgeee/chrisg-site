@@ -54,6 +54,9 @@ def send_contact():
         return jsonify({"error": "Contact form is temporarily unavailable"}), 503
 
     if not smtp_user or not smtp_pass:
+        if os.environ.get("FLASK_ENV") == "production":
+            logger.error("SMTP credentials not configured in production")
+            return jsonify({"error": "Contact form is temporarily unavailable"}), 503
         logger.warning("[Contact Form - dev mode] From: %s <%s>\n%s", name, email, message)
         return jsonify({"status": "sent"}), 200
 

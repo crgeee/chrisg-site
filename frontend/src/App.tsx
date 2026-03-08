@@ -1,18 +1,20 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import ScrollToTop from "./components/ScrollToTop";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
-import About from "./pages/About";
-import Projects from "./pages/Projects";
-import Uses from "./pages/Uses";
-import Contact from "./pages/Contact";
-import BlogList from "./pages/BlogList";
-import BlogPost from "./pages/BlogPost";
-import Login from "./pages/Login";
-import AdminDashboard from "./pages/AdminDashboard";
-import PostEditor from "./pages/PostEditor";
 import { useAuth } from "./hooks/useAuth";
+
+const About = lazy(() => import("./pages/About"));
+const Projects = lazy(() => import("./pages/Projects"));
+const Uses = lazy(() => import("./pages/Uses"));
+const Contact = lazy(() => import("./pages/Contact"));
+const BlogList = lazy(() => import("./pages/BlogList"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const Login = lazy(() => import("./pages/Login"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const PostEditor = lazy(() => import("./pages/PostEditor"));
 
 export default function App() {
   const { user, login, logout } = useAuth();
@@ -20,23 +22,25 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/uses" element={<Uses />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/blog" element={<BlogList />} />
-          <Route path="/blog/:slug" element={<BlogPost />} />
-          <Route path="/admin/login" element={<Login onLogin={login} />} />
-          <Route element={<ProtectedRoute user={user} />}>
-            <Route path="/admin" element={<AdminDashboard onLogout={logout} />} />
-            <Route path="/admin/new" element={<PostEditor />} />
-            <Route path="/admin/edit/:slug" element={<PostEditor />} />
+      <Suspense fallback={null}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/uses" element={<Uses />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/blog" element={<BlogList />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/admin/login" element={<Login onLogin={login} />} />
+            <Route element={<ProtectedRoute user={user} />}>
+              <Route path="/admin" element={<AdminDashboard onLogout={logout} />} />
+              <Route path="/admin/new" element={<PostEditor />} />
+              <Route path="/admin/edit/:slug" element={<PostEditor />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -127,3 +127,30 @@ export async function deletePost(slug: string): Promise<void> {
   const res = await apiFetch(`/posts/${slug}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete post");
 }
+
+// --- Contact ---
+
+export async function sendContactForm(data: { name: string; email: string; message: string }): Promise<void> {
+  const res = await apiFetch("/contact", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error || "Something went wrong. Please try again.");
+  }
+}
+
+// --- Auth (logout) ---
+
+export async function logout(): Promise<void> {
+  if (!refreshToken) return;
+  await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${refreshToken}`,
+    },
+  }).catch(() => {});
+  clearTokens();
+}
