@@ -76,6 +76,6 @@
 }
 
 .contact__error {
-  color: #ff3b30;
+  color: var(--color-error);
   font-size: 0.9rem;
 }

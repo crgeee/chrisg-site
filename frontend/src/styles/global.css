@@ -15,6 +15,9 @@
   --color-accent-hover: #4db3ff;
   --color-border: #d2d2d7;
   --color-border-light: rgba(0, 0, 0, 0.06);
+  --color-error: #ff3b30;
+  --color-success: #34c759;
+  --color-focus-ring: rgba(41, 151, 255, 0.2);
 
   /* Dark palette */
   --color-dark-bg: #000000;
@@ -125,6 +128,7 @@ a:hover { color: var(--color-accent-hover); }
     --color-bg-elevated: #2c2c2e;
     --color-border: #38383a;
     --color-border-light: rgba(255, 255, 255, 0.08);
+    --color-focus-ring: rgba(41, 151, 255, 0.35);
   }
 
   ::selection {

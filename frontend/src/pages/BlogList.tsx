@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPosts } from "../services/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { formatDate } from "../utils/formatDate";
 import type { Post } from "../types";
 import "./BlogList.css";
 
@@ -39,9 +40,7 @@ export default function BlogList() {
           <div className="blog-list__posts">
             {posts.map((post) => (
               <Link to={`/blog/${post.slug}`} key={post.id} className="blog-list__card">
-                <time>{new Date(post.created_at).toLocaleDateString("en-US", {
-                  year: "numeric", month: "long", day: "numeric"
-                })}</time>
+                <time>{formatDate(post.created_at)}</time>
                 <h2>{post.title}</h2>
                 <p>{post.excerpt}</p>
               </Link>

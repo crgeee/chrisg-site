@@ -3,32 +3,10 @@ import { Link } from "react-router-dom";
 import { FiGithub, FiLinkedin, FiSend } from "react-icons/fi";
 import { getPosts } from "../services/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { formatDate } from "../utils/formatDate";
+import { FEATURED_PROJECTS } from "../data/projects";
 import type { Post } from "../types";
 import "./Home.css";
-
-const FEATURED_PROJECTS = [
-  {
-    name: "reps.sh",
-    url: "https://reps.sh",
-    tag: "Live",
-    description: "Task tracker with built-in spaced repetition and AI-powered interview coaching. Used by developers preparing for technical interviews.",
-    tech: "React \u00B7 TypeScript \u00B7 Python",
-  },
-  {
-    name: "alphascan.ai",
-    url: "https://alphascan.ai",
-    tag: "Live",
-    description: "AI-powered market intelligence platform that surfaces actionable insights from financial data and news sources.",
-    tech: "React \u00B7 Python \u00B7 AI/ML",
-  },
-  {
-    name: "App Store Toolkit",
-    url: "https://github.com/crgeee/apple-appstore-toolkit",
-    tag: "Open Source",
-    description: "Claude Code plugin with 8 AI agents for automated App Store readiness reviews of iOS apps.",
-    tech: "Claude Code \u00B7 AI Agents \u00B7 iOS",
-  },
-];
 
 const SOCIAL_LINKS = [
   { href: "https://linkedin.com/in/crgee", icon: FiLinkedin, label: "LinkedIn" },
@@ -126,9 +104,7 @@ export default function Home() {
             <div className="home__post-list">
               {recentPosts.map((post) => (
                 <Link to={`/blog/${post.slug}`} key={post.id} className="home__post-card">
-                  <time>{new Date(post.created_at).toLocaleDateString("en-US", {
-                    year: "numeric", month: "long", day: "numeric"
-                  })}</time>
+                  <time>{formatDate(post.created_at)}</time>
                   <h3>{post.title}</h3>
                   <p>{post.excerpt}</p>
                 </Link>

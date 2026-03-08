@@ -15,10 +15,10 @@ class Post(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
-    slug = db.Column(db.String(200), unique=True, nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)
     excerpt = db.Column(db.String(500), nullable=False)
-    published = db.Column(db.Boolean, default=False)
+    published = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc)
     )
@@ -29,7 +29,7 @@ class Post(db.Model):
     )
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    author = db.relationship("User", back_populates="posts")
+    author = db.relationship("User", back_populates="posts", lazy="joined")
 
     def __init__(self, **kwargs):
         """Auto-generate slug from title if not provided."""
@@ -50,12 +50,25 @@ class Post(db.Model):
         return text.strip("-")
 
     def to_dict(self):
-        """Serialize post to a dict for JSON responses."""
+        """Serialize post to a dict for JSON responses (full content)."""
         return {
             "id": self.id,
             "title": self.title,
             "slug": self.slug,
             "content": self.content,
+            "excerpt": self.excerpt,
+            "published": self.published,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "author": self.author.to_dict() if self.author else None,
+        }
+
+    def to_summary_dict(self):
+        """Serialize post without content (for list endpoints)."""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "slug": self.slug,
             "excerpt": self.excerpt,
             "published": self.published,
             "created_at": self.created_at.isoformat() if self.created_at else None,

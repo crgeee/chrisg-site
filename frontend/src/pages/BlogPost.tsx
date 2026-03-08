@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getPost } from "../services/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { formatDate } from "../utils/formatDate";
 import type { Post } from "../types";
 import "./BlogPost.css";
 
@@ -44,9 +45,7 @@ export default function BlogPost() {
     <article className="blog-post container fade-in">
       <Link to="/blog" className="blog-post__back">&larr; Back to blog</Link>
       <header className="blog-post__header">
-        <time>{new Date(post.created_at).toLocaleDateString("en-US", {
-          year: "numeric", month: "long", day: "numeric"
-        })}</time>
+        <time>{formatDate(post.created_at)}</time>
         <h1>{post.title}</h1>
       </header>
       <div className="blog-post__content">

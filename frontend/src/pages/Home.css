@@ -194,7 +194,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #34c759;
+  color: var(--color-success);
   margin-bottom: 0.75rem;
 }
 
