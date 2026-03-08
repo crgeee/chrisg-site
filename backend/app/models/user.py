@@ -21,8 +21,7 @@ class User(db.Model):
         db.DateTime, default=lambda: datetime.now(timezone.utc)
     )
 
-    # Relationship to posts will be added in Task 3 when Post model is created:
-    # posts = db.relationship("Post", back_populates="author", lazy="dynamic")
+    posts = db.relationship("Post", back_populates="author", lazy="dynamic")
 
     def set_password(self, password):
         """Hash the plain-text password and store the hash."""
