@@ -1,11 +1,12 @@
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import ImageGallery from "../components/ImageGallery";
 import "./Projects.css";
 
 const projects = [
   {
     name: "reps.sh",
     url: "https://reps.sh",
-    image: "/images/reps-sh.png",
+    images: ["/images/reps-sh.png", "/images/reps-sh-how-it-works.png", "/images/reps-sh-blog.png"],
     status: "Live" as const,
     description:
       "Task tracker with built-in spaced repetition and AI-powered interview coaching. Helps developers prepare for technical interviews by scheduling review sessions using the SM-2 algorithm.",
@@ -19,7 +20,7 @@ const projects = [
   {
     name: "alphascan.ai",
     url: "https://alphascan.ai",
-    image: "/images/alphascan-ai.png",
+    images: ["/images/alphascan-ai.png"],
     status: "Live" as const,
     description:
       "AI-powered market intelligence platform that analyzes financial data and news to surface actionable insights for investors and analysts.",
@@ -33,7 +34,7 @@ const projects = [
   {
     name: "Find My Value",
     url: null,
-    image: null,
+    images: [],
     status: "In Progress" as const,
     description:
       "Salary benchmarking tool that helps software engineers understand their market worth. Aggregates compensation data and provides personalized salary insights based on role, location, and experience.",
@@ -47,7 +48,7 @@ const projects = [
   {
     name: "Apple App Store Toolkit",
     url: "https://github.com/crgeee/apple-appstore-toolkit",
-    image: "/images/appstore-toolkit.png",
+    images: ["/images/appstore-toolkit.png"],
     status: "Live" as const,
     description:
       "Claude Code plugin for App Store readiness reviews. Uses 8 specialized AI agents to review React Native and Swift iOS apps against Apple's guidelines before submission.",
@@ -61,7 +62,7 @@ const projects = [
   {
     name: "Google Play Store Toolkit",
     url: "https://github.com/crgeee/google-playstore-toolkit",
-    image: null,
+    images: [],
     status: "Live" as const,
     description:
       "Claude Code plugin for Google Play Store readiness reviews. 8 specialized agents review Android, React Native, and Expo apps for Play Store compliance.",
@@ -75,7 +76,7 @@ const projects = [
   {
     name: "UI Component Library",
     url: "https://github.com/crgeee/ui",
-    image: null,
+    images: [],
     status: "Live" as const,
     description:
       "Dark-first React component library built with Tailwind CSS v4. A reusable set of components for rapid UI development across projects.",
@@ -89,7 +90,7 @@ const projects = [
   {
     name: "chrisgonzalez.dev",
     url: "https://chrisgonzalez.dev",
-    image: "/images/chrisgonzalez-dev.png",
+    images: ["/images/chrisgonzalez-dev.png", "/images/chrisgonzalez-dev-projects.png"],
     status: "Live" as const,
     description:
       "This site. A full-stack Flask + React application with a blog CMS, JWT authentication, and automated CI/CD deployment. Built to demonstrate production-grade fullstack engineering.",
@@ -115,10 +116,8 @@ export default function Projects() {
       <div className="projects__list">
         {projects.map((project) => (
           <article key={project.name} className="projects__card">
-            {project.image && (
-              <div className="projects__image">
-                <img src={project.image} alt={`${project.name} screenshot`} loading="lazy" />
-              </div>
+            {project.images.length > 0 && (
+              <ImageGallery images={project.images} alt={project.name} />
             )}
             <div className="projects__card-header">
               <div>

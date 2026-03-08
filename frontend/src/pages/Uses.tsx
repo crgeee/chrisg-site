@@ -1,39 +1,58 @@
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import {
+  FiCode, FiTerminal, FiBox, FiGitBranch, FiCpu,
+  FiServer, FiShield, FiZap, FiLayers, FiDatabase,
+  FiGlobe, FiMonitor, FiCheckSquare, FiFileText, FiTool,
+  FiHeadphones, FiSmartphone, FiStar,
+} from "react-icons/fi";
 import "./Uses.css";
 
 const categories = [
   {
     title: "Development",
     items: [
-      { name: "VS Code", desc: "Primary editor. Vim keybindings, minimal extensions." },
-      { name: "iTerm2 + zsh", desc: "Terminal with Oh My Zsh and custom aliases." },
-      { name: "Docker", desc: "All projects containerized for consistent dev/prod parity." },
-      { name: "Git + GitHub", desc: "Version control with GitHub Actions for CI/CD." },
+      { name: "VS Code", icon: FiCode, desc: "Primary editor. Vim keybindings, minimal extensions. Monokai Pro theme." },
+      { name: "Claude Code", icon: FiStar, desc: "AI pair programming for rapid prototyping, code review, and plugin development." },
+      { name: "iTerm2 + zsh", icon: FiTerminal, desc: "Terminal with Oh My Zsh, Powerlevel10k prompt, and custom aliases." },
+      { name: "Docker", icon: FiBox, desc: "All projects containerized for consistent dev/prod parity." },
+      { name: "Git + GitHub", icon: FiGitBranch, desc: "Version control with squash-merge, branch protection, and GitHub Actions CI/CD." },
+      { name: "Postman", icon: FiZap, desc: "API testing and documentation. Saved collections for every project." },
     ],
   },
   {
     title: "Languages & Frameworks",
     items: [
-      { name: "TypeScript + React", desc: "Frontend framework of choice. Vite for tooling." },
-      { name: "Python + Flask", desc: "Backend API development. SQLAlchemy for ORM." },
-      { name: "CSS", desc: "No frameworks. CSS custom properties and vanilla CSS." },
+      { name: "TypeScript + React", icon: FiLayers, desc: "Frontend framework of choice. Vite for tooling, React Router for navigation." },
+      { name: "Python + Flask", icon: FiCpu, desc: "Backend API development. SQLAlchemy ORM, Flask-Migrate for schema changes." },
+      { name: "CSS", icon: FiMonitor, desc: "No frameworks. CSS custom properties, BEM-style naming, and vanilla CSS." },
+      { name: "PostgreSQL", icon: FiDatabase, desc: "Primary database. Used across all production apps." },
     ],
   },
   {
     title: "Infrastructure",
     items: [
-      { name: "Hetzner VPS", desc: "Affordable, reliable hosting for all my projects." },
-      { name: "Nginx", desc: "Reverse proxy and static file serving." },
-      { name: "Let's Encrypt", desc: "Free SSL certificates via Certbot." },
-      { name: "GitHub Actions", desc: "Automated testing and deployment on push to main." },
+      { name: "Hetzner VPS", icon: FiServer, desc: "Affordable, reliable hosting. Running multiple sites on a single instance." },
+      { name: "Nginx", icon: FiGlobe, desc: "Reverse proxy, SSL termination, and static file serving. Virtual hosts for multi-site." },
+      { name: "Let's Encrypt", icon: FiShield, desc: "Free SSL certificates via Certbot with auto-renewal." },
+      { name: "GitHub Actions", icon: FiZap, desc: "Automated testing, building, and deployment on push to main." },
+      { name: "Docker Compose", icon: FiBox, desc: "Multi-container orchestration for local dev and production deployments." },
     ],
   },
   {
     title: "Productivity",
     items: [
-      { name: "reps.sh", desc: "My own task tracker with spaced repetition. I use it daily." },
-      { name: "Notion", desc: "Long-form notes, project planning, and documentation." },
-      { name: "Claude Code", desc: "AI pair programming for rapid prototyping and code review." },
+      { name: "reps.sh", icon: FiCheckSquare, desc: "My own task tracker with spaced repetition. I use it daily for interview prep." },
+      { name: "Notion", icon: FiFileText, desc: "Long-form notes, project planning, and documentation." },
+      { name: "Raycast", icon: FiTool, desc: "Launcher, clipboard manager, snippets, and window management." },
+      { name: "Arc Browser", icon: FiGlobe, desc: "Primary browser. Spaces for context switching between projects." },
+    ],
+  },
+  {
+    title: "Hardware",
+    items: [
+      { name: "MacBook Pro 14\" M3 Pro", icon: FiSmartphone, desc: "Primary machine. 18GB RAM, plenty for Docker and local dev." },
+      { name: "Apple Studio Display", icon: FiMonitor, desc: "27\" 5K Retina. Clean desk setup with a single Thunderbolt cable." },
+      { name: "AirPods Pro", icon: FiHeadphones, desc: "Noise cancellation for focus. Transparency mode for meetings." },
     ],
   },
 ];
@@ -54,8 +73,13 @@ export default function Uses() {
           <div className="uses__items">
             {cat.items.map((item) => (
               <div key={item.name} className="uses__item">
-                <h3>{item.name}</h3>
-                <p>{item.desc}</p>
+                <div className="uses__item-icon">
+                  <item.icon size={20} />
+                </div>
+                <div className="uses__item-content">
+                  <h3>{item.name}</h3>
+                  <p>{item.desc}</p>
+                </div>
               </div>
             ))}
           </div>
