@@ -1,0 +1,16 @@
+.editor h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: var(--space-md); padding: 0 var(--space-sm); }
+.editor__layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); padding: 0 var(--space-sm); }
+.editor__form label { display: block; font-size: 0.9rem; color: var(--color-text-secondary); margin-bottom: var(--space-sm); }
+.editor__form input[type="text"], .editor__form textarea {
+  display: block; width: 100%; padding: 0.6rem 0.8rem; margin-top: var(--space-xs);
+  border: 1px solid var(--color-border); border-radius: 8px;
+  font-family: var(--font-sans); font-size: 1rem;
+}
+.editor__form textarea { font-family: var(--font-mono); font-size: 0.9rem; resize: vertical; }
+.editor__form input:focus, .editor__form textarea:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15); }
+.editor__checkbox { display: flex !important; flex-direction: row !important; align-items: center; gap: var(--space-xs); }
+.editor__checkbox input { width: auto !important; }
+.editor__buttons { display: flex; gap: var(--space-sm); margin-top: var(--space-sm); }
+.editor__preview { border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-sm); max-height: 80vh; overflow-y: auto; }
+.editor__preview h2 { font-size: 0.9rem; font-weight: 500; color: var(--color-text-secondary); margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); }
+@media (max-width: 768px) { .editor__layout { grid-template-columns: 1fr; } }

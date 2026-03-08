@@ -1,0 +1,17 @@
+.login { display: flex; justify-content: center; padding-top: var(--space-xl); }
+.login__form { width: 100%; max-width: 360px; }
+.login__form h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: var(--space-md); }
+.login__form label { display: block; font-size: 0.9rem; color: var(--color-text-secondary); margin-bottom: var(--space-sm); }
+.login__form input {
+  display: block; width: 100%; padding: 0.6rem 0.8rem; margin-top: var(--space-xs);
+  border: 1px solid var(--color-border); border-radius: 8px;
+  font-family: var(--font-sans); font-size: 1rem;
+}
+.login__form input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15); }
+.login__form button {
+  width: 100%; padding: 0.7rem; margin-top: var(--space-sm);
+  background: var(--color-accent); color: white; border: none; border-radius: 8px;
+  font-family: var(--font-sans); font-size: 1rem; font-weight: 500; cursor: pointer;
+}
+.login__form button:hover { background: var(--color-accent-hover); }
+.login__error { color: #d63031; font-size: 0.9rem; margin-bottom: var(--space-sm); }
