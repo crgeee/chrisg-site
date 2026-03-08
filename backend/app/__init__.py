@@ -35,4 +35,7 @@ def create_app(config_name=None):
     from .api.auth import auth_bp
     app.register_blueprint(auth_bp)
 
+    from .api.posts import posts_bp
+    app.register_blueprint(posts_bp)
+
     return app
