@@ -3,7 +3,7 @@ import {
   FiCode, FiBox, FiGitBranch, FiCpu,
   FiServer, FiShield, FiZap, FiLayers, FiDatabase,
   FiGlobe, FiMonitor, FiStar, FiCloud, FiKey,
-  FiPackage,
+  FiPackage, FiSend, FiActivity,
 } from "react-icons/fi";
 import "./Uses.css";
 
@@ -38,6 +38,8 @@ const categories = [
       { name: "Let's Encrypt", icon: FiShield, desc: "Free SSL certificates via Certbot with auto-renewal." },
       { name: "GitHub Actions", icon: FiZap, desc: "Automated testing, building, and deployment on push to main." },
       { name: "Clerk", icon: FiKey, desc: "Auth provider for alphascan.ai. Social login and session management." },
+      { name: "Resend", icon: FiSend, desc: "Transactional email API for contact forms and notifications." },
+      { name: "Sentry", icon: FiActivity, desc: "Error tracking and performance monitoring in production." },
     ],
   },
 ];
