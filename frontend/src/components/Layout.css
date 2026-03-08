@@ -1,0 +1,8 @@
+.layout { min-height: 100vh; display: flex; flex-direction: column; }
+.layout__content { flex: 1; padding: var(--space-lg) 0; }
+.layout__footer {
+  padding: var(--space-md) 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  text-align: center;
+}
