@@ -27,8 +27,15 @@ export default function BlogList() {
   }, [page]);
 
   return (
-    <div className="blog-list container fade-in">
-      <h1>Blog</h1>
+    <div className="blog-list fade-in">
+      <header className="page-header">
+        <div className="container">
+          <h1 className="page-title">Blog</h1>
+          <p className="page-intro">Field notes on engineering, craft, and building things.</p>
+        </div>
+      </header>
+
+      <div className="container blog-list__body">
       {loading ? (
         <p className="blog-list__loading">Loading...</p>
       ) : error ? (
@@ -55,6 +62,7 @@ export default function BlogList() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

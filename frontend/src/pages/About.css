@@ -1,9 +1,5 @@
-.about {
+.about__body {
   padding-top: var(--space-lg);
-}
-
-.about h1 {
-  margin-bottom: var(--space-md);
 }
 
 .about__intro {

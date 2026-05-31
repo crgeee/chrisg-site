@@ -48,12 +48,17 @@ export default function Uses() {
   useDocumentTitle("Uses");
 
   return (
-    <div className="uses container fade-in">
-      <h1 className="page-title">Uses</h1>
-      <p className="page-intro">
-        Tools and services I use for development.
-      </p>
+    <div className="uses fade-in">
+      <header className="page-header">
+        <div className="container">
+          <h1 className="page-title">Uses</h1>
+          <p className="page-intro">
+            Tools and services I use for development.
+          </p>
+        </div>
+      </header>
 
+      <div className="container uses__body">
       {categories.map((cat) => (
         <section key={cat.title} className="uses__section">
           <h2>{cat.title}</h2>
@@ -72,6 +77,7 @@ export default function Uses() {
           </div>
         </section>
       ))}
+      </div>
     </div>
   );
 }

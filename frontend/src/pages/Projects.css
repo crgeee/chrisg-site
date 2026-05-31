@@ -1,4 +1,4 @@
-.projects { padding-top: var(--space-lg); }
+.projects__body { padding-top: var(--space-lg); }
 
 .projects__list {
   display: flex;

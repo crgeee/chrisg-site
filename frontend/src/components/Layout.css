@@ -10,10 +10,18 @@
 }
 
 .layout__footer {
-  padding: var(--space-sm) 0;
-  background: var(--color-dark-bg);
-  color: var(--color-dark-text-secondary);
-  font-size: 0.75rem;
+  padding: var(--space-md) 0;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
   text-align: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--color-border);
+}
+.layout__footer p { display: inline-flex; align-items: center; gap: 0.5rem; }
+.layout__footer p::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #fdf2cb 0%, var(--color-accent) 80%);
 }

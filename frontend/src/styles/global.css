@@ -1,35 +1,52 @@
 /*
- * Modern Apple-inspired design system (2026).
- * Dark hero, dramatic typography, generous whitespace.
- * No CSS framework — custom properties and vanilla CSS only.
+ * "First Light" — a hand-illustrated dawn world.
+ * Soft pastel landscape, ink-outline shapes, paper grain, drifting calm.
+ * Inspired by immersive interactive scenes (makemepulse). No CSS framework.
  */
 
 :root {
-  /* Light palette */
-  --color-text: #1d1d1f;
-  --color-text-secondary: #86868b;
-  --color-bg: #fbfbfd;
-  --color-bg-secondary: #f5f5f7;
-  --color-bg-elevated: #ffffff;
-  --color-accent: #2997ff;
-  --color-accent-hover: #4db3ff;
-  --color-border: #d2d2d7;
-  --color-border-light: rgba(0, 0, 0, 0.06);
-  --color-error: #ff3b30;
-  --color-success: #34c759;
-  --color-focus-ring: rgba(41, 151, 255, 0.2);
+  /* ---- Core semantic palette (warm dawn) ---- */
+  --color-text: #3a2c28;
+  --color-text-secondary: #8c7669;
+  --color-bg: #f2e7d5;
+  --color-bg-secondary: #ecdcc2;
+  --color-bg-elevated: #faf3e6;
+  --color-accent: #c06b54;
+  --color-accent-hover: #a4513c;
+  --color-border: #ddc9a9;
+  --color-border-light: rgba(58, 44, 40, 0.1);
+  --color-error: #c0503f;
+  --color-success: #7f8a55;
+  --color-focus-ring: rgba(192, 107, 84, 0.3);
 
-  /* Dark palette */
-  --color-dark-bg: #000000;
-  --color-dark-bg-elevated: #1c1c1e;
-  --color-dark-text: #f5f5f7;
-  --color-dark-text-secondary: #86868b;
+  /* ---- Landscape palette (used by the Scene) ---- */
+  --sky-top: #aecbd6;
+  --sky-mid: #d6dbd9;
+  --sky-low: #f3e2cd;
+  --horizon: #f7ddc1;
+  --sun: #fdf2cf;
+  --sun-glow: #f8e3a8;
+  --cloud: #e9bcc6;
+  --cloud-light: #f6dde0;
+  --sea: #a3bcc1;
+  --sea-light: #c8d8d6;
+  --sand: #e7d8bb;
+  --sand-deep: #dcc7a0;
+  --rock: #b27f7b;
+  --rock-mid: #9a6967;
+  --rock-deep: #714b4b;
+  --rock-shadow: #553a3c;
+  --sage: #889573;
+  --ink: #3a2c28;
+  --paper: #f6edda;
+  --paper-edge: #e4d3b4;
 
-  /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* ---- Typography ---- */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
 
-  /* Spacing */
+  /* ---- Spacing ---- */
   --space-xs: 0.5rem;
   --space-sm: 1rem;
   --space-md: 2rem;
@@ -37,18 +54,20 @@
   --space-xl: 6rem;
   --space-2xl: 10rem;
 
-  /* Layout */
-  --nav-height: 52px;
+  /* ---- Layout ---- */
+  --nav-height: 64px;
   --max-width: 720px;
-  --max-width-wide: 980px;
+  --max-width-wide: 1040px;
 
-  /* Motion */
+  /* ---- Motion ---- */
   --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration: 0.3s;
+  --duration: 0.35s;
+
+  color-scheme: light;
 }
 
-/* Reset */
+/* ---- Reset ---- */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html {
@@ -60,12 +79,37 @@ html {
 
 body {
   font-family: var(--font-sans);
+  font-weight: 400;
   color: var(--color-text);
   background: var(--color-bg);
-  line-height: 1.47;
+  line-height: 1.6;
+  font-optical-sizing: auto;
+  overflow-x: hidden;
 }
 
-/* Links */
+/* Paper grain over everything — the painterly tooth */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- Typography ---- */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+p { text-wrap: pretty; }
+
 a {
   color: var(--color-accent);
   text-decoration: none;
@@ -74,22 +118,36 @@ a {
 
 a:hover { color: var(--color-accent-hover); }
 
-/* Selection */
-::selection {
-  background: rgba(41, 151, 255, 0.2);
+::selection { background: rgba(192, 107, 84, 0.22); color: var(--color-text); }
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 3px;
 }
 
-/* Scroll-reveal animation */
+/* ---- Animations ---- */
 @keyframes revealUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(22px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-in {
-  animation: revealUp 0.8s var(--ease-spring) both;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Layout containers */
+.fade-in { animation: revealUp 0.9s var(--ease-spring) both; }
+
+/* Scroll-reveal (IntersectionObserver toggles .is-visible) */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.9s var(--ease-spring), transform 0.9s var(--ease-spring);
+}
+.reveal.is-visible { opacity: 1; transform: none; }
+
+/* ---- Layout containers ---- */
 .container {
   max-width: var(--max-width);
   margin: 0 auto;
@@ -102,52 +160,83 @@ a:hover { color: var(--color-accent-hover); }
   padding: 0 var(--space-md);
 }
 
-/* Shared page heading styles */
+/* ---- Shared page heading styles ---- */
 .page-title {
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
 }
 
 .page-intro {
   color: var(--color-text-secondary);
-  font-size: 1.1rem;
-  margin-top: var(--space-xs);
+  font-size: 1.15rem;
+  max-width: 56ch;
+  margin-top: var(--space-sm);
   margin-bottom: var(--space-lg);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-text: #f5f5f7;
-    --color-text-secondary: #86868b;
-    --color-bg: #000000;
-    --color-bg-secondary: #1c1c1e;
-    --color-bg-elevated: #2c2c2e;
-    --color-border: #38383a;
-    --color-border-light: rgba(255, 255, 255, 0.08);
-    --color-focus-ring: rgba(41, 151, 255, 0.35);
-  }
+/* A reusable page header band with a soft dawn-sky wash.
+   Negative margin slides it up under the fixed transparent nav. */
+.page-header {
+  position: relative;
+  margin-top: calc(-1 * var(--nav-height));
+  padding: calc(var(--nav-height) + var(--space-lg)) 0 var(--space-lg);
+  background:
+    radial-gradient(120% 90% at 82% -30%, var(--sun-glow) 0%, transparent 42%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-low) 58%, var(--color-bg) 100%);
+  overflow: hidden;
+}
+.page-header::before {
+  content: "";
+  position: absolute;
+  top: 18%;
+  right: 14%;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fefae6 0%, #fdf2cb 55%, rgba(253, 242, 203, 0) 78%);
+  opacity: 0.9;
+}
+.page-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--color-border-light);
+}
+.page-header .page-title { position: relative; }
 
-  ::selection {
-    background: rgba(41, 151, 255, 0.35);
-  }
+/* Paper surface used by cards */
+.paper {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -28px rgba(85, 58, 60, 0.5);
 }
 
-/* Responsive */
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* ---- Responsive ---- */
 @media (max-width: 640px) {
   :root {
-    --space-lg: 2.5rem;
+    --space-lg: 2.75rem;
     --space-xl: 4rem;
     --space-2xl: 6rem;
   }
-
-  .container,
-  .container--wide {
-    padding: 0 var(--space-sm);
-  }
-
-  .page-title { font-size: 1.75rem; }
+  .container, .container--wide { padding: 0 var(--space-sm); }
+  .page-intro { font-size: 1.05rem; }
 }

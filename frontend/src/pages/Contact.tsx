@@ -25,12 +25,17 @@ export default function Contact() {
   };
 
   return (
-    <div className="contact container fade-in">
-      <h1 className="page-title">Contact</h1>
-      <p className="page-intro">
-        Have a question, want to collaborate, or just want to say hi? Send me a message.
-      </p>
+    <div className="contact fade-in">
+      <header className="page-header">
+        <div className="container">
+          <h1 className="page-title">Contact</h1>
+          <p className="page-intro">
+            Have a question, want to collaborate, or just want to say hi? Send me a message.
+          </p>
+        </div>
+      </header>
 
+      <div className="container contact__body">
       {status === "sent" ? (
         <div className="contact__success">
           <p>Message sent. I'll get back to you soon.</p>
@@ -78,6 +83,7 @@ export default function Contact() {
           </button>
         </form>
       )}
+      </div>
     </div>
   );
 }
