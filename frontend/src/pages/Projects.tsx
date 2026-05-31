@@ -7,12 +7,17 @@ export default function Projects() {
   useDocumentTitle("Projects");
 
   return (
-    <div className="projects container fade-in">
-      <h1 className="page-title">Projects</h1>
-      <p className="page-intro">
-        Things I build to explore ideas, learn new tech, and solve real problems.
-      </p>
+    <div className="projects fade-in">
+      <header className="page-header">
+        <div className="container">
+          <h1 className="page-title">Projects</h1>
+          <p className="page-intro">
+            Things I build to explore ideas, learn new tech, and solve real problems.
+          </p>
+        </div>
+      </header>
 
+      <div className="container projects__body">
       <div className="projects__list">
         {projects.map((project) => (
           <article key={project.name} className="projects__card">
@@ -48,6 +53,7 @@ export default function Projects() {
             </div>
           </article>
         ))}
+      </div>
       </div>
     </div>
   );

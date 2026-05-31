@@ -5,9 +5,14 @@ export default function About() {
   useDocumentTitle("About");
 
   return (
-    <div className="about container fade-in">
-      <h1 className="page-title">About Me</h1>
+    <div className="about fade-in">
+      <header className="page-header">
+        <div className="container">
+          <h1 className="page-title">About Me</h1>
+        </div>
+      </header>
 
+      <div className="container about__body">
       <section className="about__intro">
         <p>
           I'm a Staff Software Engineer based in San Diego, California.
@@ -63,6 +68,7 @@ export default function About() {
           or <a href="/contact">use the contact form</a>.
         </p>
       </section>
+      </div>
     </div>
   );
 }

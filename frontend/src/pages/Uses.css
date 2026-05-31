@@ -1,4 +1,4 @@
-.uses { padding-top: var(--space-lg); }
+.uses__body { padding-top: var(--space-lg); }
 
 .uses__section {
   padding: var(--space-lg) 0;
