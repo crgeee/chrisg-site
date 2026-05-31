@@ -194,7 +194,7 @@ export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () 
     {
       let s = "";
       const r = rnd(91);
-      const count = Math.round(Lscat.localW / 135);
+      const count = Math.round(Lscat.localW / 118);
       for (let i = 0; i < count; i++) {
         const x = Lscat.localW * ((i + r() * 0.9) / count);
         const depth = r();
@@ -202,11 +202,13 @@ export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () 
         const sc = 0.5 + depth * 0.6;
         const k = r();
         let piece;
-        if (k < 0.42) piece = A.sage(i + 100);
-        else if (k < 0.62) piece = A.grassTuft(i + 200);
-        else if (k < 0.78) piece = A.pebble(i + 300);
-        else if (k < 0.9) piece = A.spiralFern(i + 400);
-        else piece = A.cottonFlower(i + 450);
+        if (k < 0.34) piece = A.sage(i + 100);
+        else if (k < 0.52) piece = A.grassTuft(i + 200);
+        else if (k < 0.64) piece = A.pebble(i + 300);
+        else if (k < 0.76) piece = A.spiralFern(i + 400);
+        else if (k < 0.86) piece = A.cottonFlower(i + 450);
+        else if (k < 0.94) piece = A.flowerStalk(i + 470);
+        else piece = A.agave(i + 480);
         s += wrap(x, y, sc, piece);
       }
       Lscat.svg.innerHTML = s;
@@ -229,7 +231,7 @@ export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () 
         if (r() > 0.55) s += wrap(bx - 30 + r() * 60, H - 24 - r() * 30, 1 + r() * 0.6, A.cottonFlower(i + 560));
         if (r() > 0.6) s += wrap(bx + 40, H - h * 0.5, 1, A.pine((bx * 5 | 0) + 3, 60 + r() * 50));
       }
-      const count = Math.round(Lnear.localW / 88);
+      const count = Math.round(Lnear.localW / 80);
       for (let i = 0; i < count; i++) {
         const x = Lnear.localW * ((i + r() * 0.95) / count);
         const depth = r();
@@ -237,11 +239,13 @@ export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () 
         const sc = 0.8 + depth * 1.0;
         const k = r();
         let piece;
-        if (k < 0.34) piece = A.sage(i + 700);
-        else if (k < 0.56) piece = A.grassTuft(i + 800);
-        else if (k < 0.7) piece = A.pebble(i + 900);
-        else if (k < 0.82) piece = A.spiralFern(i + 1000);
-        else if (k < 0.93) piece = A.cottonFlower(i + 1050);
+        if (k < 0.28) piece = A.sage(i + 700);
+        else if (k < 0.48) piece = A.grassTuft(i + 800);
+        else if (k < 0.6) piece = A.pebble(i + 900);
+        else if (k < 0.72) piece = A.spiralFern(i + 1000);
+        else if (k < 0.82) piece = A.cottonFlower(i + 1050);
+        else if (k < 0.9) piece = A.flowerStalk(i + 1070);
+        else if (k < 0.96) piece = A.agave(i + 1080);
         else piece = A.speck(i + 1100);
         s += wrap(x, y, sc, piece);
       }
