@@ -255,20 +255,18 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 
 /* hint */
 .wander .hint {
-  position: fixed; z-index: 55; right: 7%; top: 56%;
-  width: 86px; height: 86px; border-radius: 50%;
-  border: 1.6px solid var(--ink); background: color-mix(in oklab, var(--panel) 70%, transparent);
+  position: fixed; z-index: 55; right: 7%; top: 54%;
+  width: 92px; height: 92px; border-radius: 50%;
+  border: 1.6px solid var(--ink); background: color-mix(in oklab, var(--panel) 72%, transparent);
   backdrop-filter: blur(1px);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; color: var(--ink); pointer-events: none;
+  gap: 5px; color: var(--ink); pointer-events: none; text-align: center;
   transition: opacity .6s ease, transform .6s ease;
-  animation: wanderFloaty 3.4s ease-in-out infinite;
 }
-.wander .hint .arrow { font-size: 19px; line-height: 1; }
-.wander .hint .arrow.r { transform: rotate(90deg); }
-.wander .hint .lbl { font-size: 12.5px; letter-spacing: .04em; }
+.wander .hint .arrow { font-size: 23px; line-height: 1; animation: wanderNudge 1.7s ease-in-out infinite; }
+.wander .hint .lbl { font-size: 11px; line-height: 1.18; letter-spacing: .03em; padding: 0 8px; }
 .wander .hint.hide { opacity: 0; transform: scale(.85); }
-@keyframes wanderFloaty { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-7px);} }
+@keyframes wanderNudge { 0%,100%{ transform: translateX(-5px);} 50%{ transform: translateX(5px);} }
 
 /* progress dots */
 .wander .progress {
@@ -322,15 +320,20 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 
 /* reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .wander .hint { animation: none; }
+  .wander .hint .arrow { animation: none; }
   .wander .panel { transition: opacity .2s ease; }
+}
+
+/* Drop the (expensive) hand-drawn edge filter on touch devices to keep dragging smooth. */
+@media (hover: none), (pointer: coarse) {
+  .wander .butte, .wander .rock { filter: none; }
 }
 
 /* mobile */
 @media (max-width: 720px) {
   .wander .wordmark { top: 18px; left: 18px; }
   .wander .wordmark .name { font-size: 18px; }
-  .wander .hint { width: 72px; height: 72px; right: 50%; transform: translateX(50%); top: auto; bottom: 92px; }
+  .wander .hint { width: 82px; height: 82px; right: 50%; transform: translateX(50%); top: auto; bottom: 96px; }
   .wander .hint.hide { transform: translateX(50%) scale(.85); }
   .wander .menu-btn { bottom: 20px; right: 18px; }
   .wander .sheet { right: 18px; bottom: 80px; }

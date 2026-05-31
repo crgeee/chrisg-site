@@ -414,7 +414,17 @@ export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () 
     lastX = mx; lastT = nowT;
     if (e.cancelable) e.preventDefault();
   }
-  function up() { dragging = false; stage.classList.remove("dragging"); }
+  function up() {
+    if (!dragging) return;
+    dragging = false;
+    stage.classList.remove("dragging");
+    // Snap to a station: a flick advances one; a slow drag rounds to nearest.
+    const cur = scroll / stationStep;
+    let idx = Math.round(cur);
+    if (vel > 4) idx = Math.floor(cur) + 1;
+    else if (vel < -4) idx = Math.ceil(cur) - 1;
+    goTo(Math.max(0, Math.min(N - 1, idx)));
+  }
 
   function markInteract() {
     if (interacted) return;
