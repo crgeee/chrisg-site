@@ -1,0 +1,300 @@
+/* wander.css — palette moods + hand-drawn art classes + UI chrome.
+   Ported from the Claude Design handoff (scene/style.css), scoped under
+   `.wander` so it never leaks into the blog/admin pages. */
+
+.wander {
+  --stroke-w: 2.4;
+  --panel: #efe7d6;
+  --panel-edge: #3a2a25;
+  --panel-ink: #3a2a25;
+}
+
+/* ---- PALETTE MOODS ---- (default = sunset) */
+.wander,
+.wander[data-palette="sunset"] {
+  --sky-top:#bcd6e0; --sky-bot:#f4dadb;
+  --sun:#f6e3a4; --cloud:#f3cdd2;
+  --land-far:#d8bdba; --land-mid:#c6a09a; --hill:#bb928a;
+  --butte:#b58177; --bank:#d4c6a0; --sand:#e8ddc6; --sand-deep:#d8c8a6;
+  --river:#8fa1bd; --river-hi:#cdd7e4;
+  --rock:#7a564d; --pine:#6a5a4c; --sage:#9b9c7e;
+  --ink:#3a2a25; --ink-soft:#6f574e;
+  --plant:#5d7d5a; --tuft:#f7f4ed;
+  --panel:#efe7d6; --panel-edge:#3a2a25; --panel-ink:#3a2a25;
+}
+.wander[data-palette="twilight"] {
+  --sky-top:#5d628f; --sky-bot:#c4a7c2;
+  --sun:#f0d3ac; --cloud:#b6a4c4;
+  --land-far:#9286ab; --land-mid:#7a6c95; --hill:#6b5d86;
+  --butte:#695c82; --bank:#9a8fb4; --sand:#b6abc6; --sand-deep:#a294b8;
+  --river:#43547e; --river-hi:#8c9abf;
+  --rock:#473d5e; --pine:#3a3852; --sage:#7c7896;
+  --ink:#251f33; --ink-soft:#544a69;
+  --plant:#6f8088; --tuft:#efeaf4;
+  --panel:#e8e1ec; --panel-edge:#2c2440; --panel-ink:#2c2440;
+}
+.wander[data-palette="golden"] {
+  --sky-top:#e7c492; --sky-bot:#f6e6c0;
+  --sun:#f7c869; --cloud:#f2d3a3;
+  --land-far:#dcb88c; --land-mid:#cb9c6c; --hill:#bf8455;
+  --butte:#c0875a; --bank:#dcc28e; --sand:#edd8ad; --sand-deep:#dcc086;
+  --river:#cfb277; --river-hi:#f0dcab;
+  --rock:#7d4f32; --pine:#706c3a; --sage:#9c9560;
+  --ink:#3a281a; --ink-soft:#74583e;
+  --plant:#7e7c41; --tuft:#f7f0de;
+  --panel:#f1e3c6; --panel-edge:#3a281a; --panel-ink:#3a281a;
+}
+.wander[data-palette="valley"] {
+  --sky-top:#a9c3cb; --sky-bot:#e7ecda;
+  --sun:#f1e7ac; --cloud:#dde6d2;
+  --land-far:#aab9a4; --land-mid:#8ba07d; --hill:#789067;
+  --butte:#8a9a6f; --bank:#bcc294; --sand:#dcdec2; --sand-deep:#c7caa3;
+  --river:#7e98a1; --river-hi:#c6d4d0;
+  --rock:#5a6b50; --pine:#3f5b38; --sage:#869a6c;
+  --ink:#2c3327; --ink-soft:#56604b;
+  --plant:#5d7d5a; --tuft:#f3f4eb;
+  --panel:#eaebd9; --panel-edge:#2c3327; --panel-ink:#2c3327;
+}
+
+/* lock page scroll only while the world is mounted */
+body.wander-lock { overflow: hidden; overscroll-behavior: none; }
+
+.wander {
+  font-family: "Mulish", system-ui, sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.wander #stage {
+  position: fixed; inset: 0; overflow: hidden;
+  cursor: grab; touch-action: none;
+  user-select: none; -webkit-user-select: none;
+  transition: background .8s ease;
+}
+.wander #stage.dragging { cursor: grabbing; }
+
+.wander #sky {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bot) 52%, color-mix(in oklab, var(--sky-bot) 60%, var(--land-far)) 60%);
+  transition: background .8s ease;
+}
+
+.wander .layer {
+  position: absolute; top: 0; left: 0; height: 100%;
+  will-change: transform; pointer-events: none;
+}
+.wander .layer svg { display: block; overflow: visible; height: 100%; }
+.wander .layer.content { pointer-events: none; }
+.wander .depth-far { opacity: .96; }
+
+/* ---- art strokes / fills ---- */
+.wander .butte-outline { fill: none; stroke: var(--ink); stroke-width: calc(var(--stroke-w) + 0.5); stroke-linejoin: round; stroke-linecap: round; }
+.wander .fill-butte { fill: var(--butte); stroke: none; }
+.wander .talus { fill: color-mix(in oklab, var(--butte) 60%, var(--bank)); stroke: none; }
+.wander .strata-d { fill: #2a1d18; opacity: .1; stroke: none; }
+.wander .strata-l { fill: #ffffff; opacity: .09; stroke: none; }
+.wander .strata-line { fill: none; stroke: #2a1d18; stroke-width: 1; opacity: .16; }
+.wander .butte-sh { fill: #2a1d18; opacity: .14; stroke: none; }
+.wander .butte-gully { fill: none; stroke: #2a1d18; stroke-width: 1.2; opacity: .16; stroke-linecap: round; }
+.wander .fill-rock { fill: var(--rock); stroke: none; }
+
+/* land masses */
+.wander .land-far { fill: var(--land-far); stroke: none; }
+.wander .land-mid { fill: var(--land-mid); stroke: none; }
+.wander .land-hill { fill: var(--hill); stroke: none; }
+.wander .land-near { fill: var(--sand); stroke: none; }
+.wander .land-bank { fill: var(--bank); stroke: none; }
+.wander .land-hi { fill: none; stroke: var(--ink); stroke-width: 2.1; opacity: .62; stroke-linecap: round; stroke-linejoin: round; }
+
+/* river */
+.wander .river-fill { fill: var(--river); stroke: none; }
+.wander .river-hl { fill: none; stroke: var(--river-hi); stroke-width: 2.2; opacity: .65; stroke-linecap: round; }
+.wander .ripple { fill: none; stroke: var(--river-hi); stroke-width: 1.3; opacity: .5; stroke-linecap: round; }
+
+/* sun + clouds */
+.wander .fill-sun { fill: var(--sun); stroke: none; }
+.wander .sun-halo { fill: var(--sun); opacity: .2; stroke: none; }
+.wander .fill-cloud { fill: var(--cloud); stroke: none; opacity: .92; }
+
+/* pines */
+.wander .pine-body { fill: var(--pine); stroke: none; }
+.wander .pine-trunk { stroke: color-mix(in oklab, var(--pine) 70%, var(--ink)); stroke-width: 2; }
+
+/* sage + plants */
+.wander .sage-d { fill: var(--sage); opacity: .8; stroke: none; }
+.wander .sage-stem { fill: none; stroke: var(--ink-soft); stroke-width: 1; opacity: .4; stroke-linecap: round; }
+.wander .fill-tuft { fill: var(--tuft); stroke: var(--ink-soft); stroke-width: 1.2; }
+.wander .fill-ink { fill: var(--ink); stroke: none; }
+.wander .stem, .wander .grass { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.wander .stem-green { fill: none; stroke: var(--plant); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wander .speck { stroke: var(--ink-soft); stroke-width: 1.1; opacity: .4; stroke-linecap: round; }
+
+/* haze — pushes far layers toward the sky colour for depth */
+.wander .haze-far { opacity: .92; }
+.wander .haze-far .fill-butte { fill: color-mix(in oklab, var(--butte) 45%, var(--sky-bot)); }
+.wander .haze-far .butte-outline { stroke: color-mix(in oklab, var(--ink) 22%, var(--land-far)); stroke-width: 1.6; }
+.wander .haze-far .land-far { fill: color-mix(in oklab, var(--land-far) 78%, var(--sky-bot)); }
+.wander .haze-far .strata-d, .wander .haze-far .strata-l, .wander .haze-far .strata-line, .wander .haze-far .butte-gully, .wander .haze-far .butte-sh { opacity: 0; }
+.wander .haze-far .pine-body { fill: color-mix(in oklab, var(--pine) 45%, var(--land-far)); }
+.wander .haze-mid .fill-butte { fill: color-mix(in oklab, var(--butte) 78%, var(--sky-bot)); }
+.wander .haze-mid .butte-outline { stroke: color-mix(in oklab, var(--ink) 55%, var(--land-mid)); }
+.wander .haze-mid .land-hi { opacity: .34; }
+.wander .haze-mid .pine-body { fill: color-mix(in oklab, var(--pine) 72%, var(--land-mid)); }
+
+/* ---- content panels (parchment) ---- */
+.wander .panel {
+  position: absolute;
+  width: min(78vw, 380px);
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 2.2px solid var(--panel-edge);
+  border-radius: 4px 7px 5px 8px;
+  padding: 22px 24px 24px;
+  box-shadow: 6px 9px 0 -2px color-mix(in oklab, var(--panel-edge) 22%, transparent),
+              0 18px 40px -18px rgba(0,0,0,.4);
+  opacity: 0;
+  transform: translateY(14px) rotate(-.5deg);
+  transition: opacity .55s ease, transform .55s ease;
+  pointer-events: none;
+}
+.wander .panel.is-near { opacity: 1; transform: translateY(0) rotate(-.5deg); pointer-events: auto; }
+.wander .panel .kicker {
+  font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-soft); margin: 0 0 12px;
+}
+.wander .panel .ptitle {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 500; font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.12; margin: 0 0 12px; white-space: pre-line;
+  letter-spacing: -.01em;
+}
+.wander .panel .pbody { font-size: 15px; line-height: 1.5; margin: 0; color: color-mix(in oklab, var(--panel-ink) 86%, transparent); }
+.wander .panel .plinks { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.wander .panel .plinks li { border-top: 1px solid color-mix(in oklab, var(--panel-edge) 24%, transparent); }
+.wander .panel .plinks a, .wander .panel .plinks .row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 9px 2px; text-decoration: none; color: var(--panel-ink);
+  font-size: 15px; transition: padding-left .2s ease, color .2s ease;
+}
+.wander .panel .plinks a:hover { padding-left: 8px; color: color-mix(in oklab, var(--panel-ink) 70%, var(--plant)); }
+.wander .panel .plinks .lbl { white-space: nowrap; flex-shrink: 0; }
+.wander .panel .plinks .meta { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; text-align: right; }
+.wander .panel .ptitle em { font-style: italic; }
+
+/* intro lead quote (first panel) */
+.wander .panel .lead {
+  margin: 0 0 16px; padding: 0 0 15px;
+  border-bottom: 1px solid color-mix(in oklab, var(--panel-edge) 22%, transparent);
+}
+.wander .panel .lead em {
+  font-family: "Newsreader", Georgia, serif; font-style: italic;
+  font-size: clamp(18px, 1.9vw, 23px); line-height: 1.28; letter-spacing: -.01em;
+  color: var(--panel-ink);
+}
+
+/* ---- paper grain + vignette ---- */
+.wander #grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 40;
+  mix-blend-mode: multiply; opacity: .5;
+}
+.wander #vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 39;
+  box-shadow: inset 0 0 220px -40px rgba(40,28,22,.34);
+}
+
+/* ---- UI chrome ---- */
+.wander .ui { position: fixed; z-index: 60; }
+.wander .wordmark { top: 26px; left: 30px; }
+.wander .wordmark .name {
+  font-family: "Newsreader", serif; font-size: 21px; font-weight: 500;
+  letter-spacing: .01em; color: var(--ink); margin: 0; line-height: 1;
+}
+.wander .wordmark .tag {
+  font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-soft); margin: 5px 0 0;
+}
+
+/* hint */
+.wander .hint {
+  position: fixed; z-index: 55; right: 7%; top: 56%;
+  width: 86px; height: 86px; border-radius: 50%;
+  border: 1.6px solid var(--ink); background: color-mix(in oklab, var(--panel) 70%, transparent);
+  backdrop-filter: blur(1px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; color: var(--ink); pointer-events: none;
+  transition: opacity .6s ease, transform .6s ease;
+  animation: wanderFloaty 3.4s ease-in-out infinite;
+}
+.wander .hint .arrow { font-size: 19px; line-height: 1; }
+.wander .hint .arrow.r { transform: rotate(90deg); }
+.wander .hint .lbl { font-size: 12.5px; letter-spacing: .04em; }
+.wander .hint.hide { opacity: 0; transform: scale(.85); }
+@keyframes wanderFloaty { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-7px);} }
+
+/* progress dots */
+.wander .progress {
+  bottom: 30px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px; align-items: center;
+}
+.wander .progress button {
+  -webkit-appearance: none; appearance: none; border: none; cursor: pointer;
+  width: 9px; height: 9px; padding: 0; border-radius: 50%;
+  background: color-mix(in oklab, var(--ink) 28%, transparent);
+  transition: transform .25s ease, background .25s ease; position: relative;
+}
+.wander .progress button[aria-current="true"] { background: var(--ink); transform: scale(1.5); }
+.wander .progress button .pl {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft);
+  opacity: 0; transition: opacity .2s ease; white-space: nowrap; pointer-events: none;
+}
+.wander .progress button:hover .pl, .wander .progress button[aria-current="true"] .pl { opacity: 1; }
+
+/* menu button + sheet */
+.wander .menu-btn {
+  bottom: 26px; right: 30px;
+  width: 50px; height: 50px; border-radius: 50%;
+  border: 1.6px solid var(--ink); background: var(--panel);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  letter-spacing: 2px; font-size: 20px; color: var(--ink);
+  box-shadow: 0 8px 22px -10px rgba(0,0,0,.4);
+  transition: transform .2s ease;
+}
+.wander .menu-btn:hover { transform: translateY(-2px); }
+.wander .sheet {
+  position: fixed; z-index: 70; bottom: 88px; right: 30px;
+  background: var(--panel); color: var(--panel-ink);
+  border: 2px solid var(--panel-edge); border-radius: 6px;
+  padding: 8px; min-width: 200px;
+  box-shadow: 0 22px 50px -20px rgba(0,0,0,.5);
+  opacity: 0; transform: translateY(10px) scale(.97); transform-origin: bottom right;
+  pointer-events: none; transition: opacity .22s ease, transform .22s ease;
+}
+.wander .sheet.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.wander .sheet .shead { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 10px 8px; }
+.wander .sheet button.dest {
+  display: flex; width: 100%; justify-content: space-between; align-items: baseline;
+  background: none; border: none; cursor: pointer; text-align: left;
+  padding: 9px 10px; border-radius: 4px; color: var(--panel-ink); font: inherit; font-size: 15px;
+  transition: background .15s ease;
+}
+.wander .sheet button.dest:hover { background: color-mix(in oklab, var(--panel-edge) 10%, transparent); }
+.wander .sheet button.dest .n { font-size: 12px; color: var(--ink-soft); }
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .wander .hint { animation: none; }
+  .wander .panel { transition: opacity .2s ease; }
+}
+
+/* mobile */
+@media (max-width: 720px) {
+  .wander .wordmark { top: 18px; left: 18px; }
+  .wander .wordmark .name { font-size: 18px; }
+  .wander .hint { width: 72px; height: 72px; right: 50%; transform: translateX(50%); top: auto; bottom: 92px; }
+  .wander .hint.hide { transform: translateX(50%) scale(.85); }
+  .wander .menu-btn { bottom: 20px; right: 18px; }
+  .wander .sheet { right: 18px; bottom: 80px; }
+  .wander .progress { bottom: 22px; }
+  .wander .panel { width: min(86vw, 360px); }
+}
