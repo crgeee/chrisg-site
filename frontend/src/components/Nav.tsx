@@ -3,11 +3,8 @@ import { Link, NavLink } from "react-router-dom";
 import "./Nav.css";
 
 const LINKS = [
-  { to: "/about", label: "About" },
-  { to: "/projects", label: "Projects" },
+  { to: "/", label: "Home" },
   { to: "/blog", label: "Blog" },
-  { to: "/uses", label: "Uses" },
-  { to: "/contact", label: "Contact" },
 ];
 
 export default function Nav() {

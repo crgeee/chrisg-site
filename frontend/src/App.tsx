@@ -3,13 +3,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import ScrollToTop from "./components/ScrollToTop";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Home from "./pages/Home";
+import WanderWorld from "./wander/WanderWorld";
 import { useAuth } from "./hooks/useAuth";
 
-const About = lazy(() => import("./pages/About"));
-const Projects = lazy(() => import("./pages/Projects"));
-const Uses = lazy(() => import("./pages/Uses"));
-const Contact = lazy(() => import("./pages/Contact"));
 const BlogList = lazy(() => import("./pages/BlogList"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Login = lazy(() => import("./pages/Login"));
@@ -24,12 +20,11 @@ export default function App() {
       <ScrollToTop />
       <Suspense fallback={null}>
         <Routes>
+          {/* The whole "site" is the wandering world. */}
+          <Route path="/" element={<WanderWorld />} />
+
+          {/* Blog (reading) + admin keep the simple chrome. */}
           <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/uses" element={<Uses />} />
-            <Route path="/contact" element={<Contact />} />
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/admin/login" element={<Login onLogin={login} />} />

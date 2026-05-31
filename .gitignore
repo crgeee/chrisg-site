@@ -15,6 +15,9 @@ venv/
 node_modules/
 frontend/dist/
 
+# Built frontend published into the backend (generated on deploy)
+backend/static/
+
 # IDE
 .vscode/
 .idea/

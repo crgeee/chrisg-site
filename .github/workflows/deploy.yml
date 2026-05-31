@@ -8,14 +8,31 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to Hetzner VPS
+      - name: Deploy to Hetzner VPS (native — gunicorn + systemd, no Docker)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
+            set -e
             cd /opt/chrisg-site
-            git pull origin main
-            docker compose up --build -d
-            docker image prune -f
+
+            # Sync to the pushed commit (discard any server-side drift).
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Backend: install/refresh dependencies in the venv.
+            backend/.venv/bin/pip install -q -r backend/requirements.txt
+
+            # Frontend: build the SPA.
+            cd frontend && npm ci --no-audit --no-fund && npm run build && cd ..
+
+            # Database migrations first (production env loaded from .env), so a
+            # failed migration never leaves a new SPA against an old backend.
+            cd backend && set -a && . ../.env && set +a && FLASK_APP=wsgi:app .venv/bin/flask db upgrade && cd ..
+
+            # Publish the built SPA where Flask serves it, then restart gunicorn
+            # (nginx already proxies :443 -> :8000).
+            rm -rf backend/static && cp -r frontend/dist backend/static
+            sudo systemctl restart chrisg-site
