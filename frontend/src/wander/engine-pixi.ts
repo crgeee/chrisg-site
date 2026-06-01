@@ -125,28 +125,20 @@ type Wanderer = {
 // Plant that sways about its base.
 type Swayer = { s: Sprite; amp: number; sp: number; ph: number; gust: number };
 
-// A small gliding bird in the loose flock — one direction, gentle altitude bob,
-// staggered respawn. Depth controls size/speed/tint so the flock reads layered.
-type FlockBird = {
-  g: Graphics; // procedurally drawn each frame (so the flap never flips facing)
-  u: number; // size unit (px)
-  color: number; // body colour (depth + sky tinted)
-  x: number;
-  y0: number;
-  depth: number; // 0 near → 1 far, drives size/speed/altitude/tint
-  speed: number;
-  span: number; // x past which it respawns
-  bobAmp: number;
-  bobSp: number;
-  bobPh: number;
-  flapSp: number;
-  flapPh: number;
-  spawnDelay: number; // seconds before it (re)enters from the left
-  startX: number; // x it (re)enters at
+// Floating ambient mote: rises slowly, drifts sideways, fades in/out, loops.
+// (The gentle makemepulse-style sky particles — they replace the birds.)
+type Dust = {
+  g: Graphics;
+  x: number; // base x (drift oscillates around it)
+  y: number;
+  rise: number; // upward speed (px/s)
+  drift: number; // sideways drift amplitude
+  sp: number; // drift rate
+  ph: number; // drift phase
+  fadeSp: number; // fade rate
+  fadePh: number; // fade phase
+  maxA: number; // peak opacity
 };
-
-// Drifting dust mote.
-type Dust = { g: Graphics; x: number; y: number; amp: number; sp: number; ph: number };
 
 export async function mountWorldPixi(
   root: HTMLElement,
@@ -221,7 +213,7 @@ export async function mountWorldPixi(
   let wanderers: Wanderer[] = [];
   let swayers: Swayer[] = [];
   let dust: Dust[] = [];
-  let flock: FlockBird[] = [];
+  let dustSpan = 0;
   let clouds: { s: Sprite; x: number; y: number; speed: number; baseAlpha: number }[] = [];
   let cloudTex: Texture | null = null;
   let cloudSpan = 0;
@@ -357,39 +349,6 @@ export async function mountWorldPixi(
     const tex = app.renderer.generateTexture(g);
     g.destroy();
     return tex;
-  }
-
-  // A small side-view songbird drawn facing +x (right). `flap` ∈ [-1,1] sets the
-  // wing elevation (+1 = up-stroke, -1 = down-stroke). The body never mirrors, so
-  // the bird can't "flip" as it flaps. Redrawn each frame — just a few shapes.
-  // A small bird seen from below as it flies across — the universal "two swept
-  // wings + a little body" silhouette (a swift/swallow). It's symmetric, so it has
-  // no left/right facing and can NEVER flip; `flap` ∈ [-1,1] raises the wingtips
-  // into a V (up-stroke) or lowers them (down-stroke). Wing-dominant, so it always
-  // reads as a bird (never a body-blob).
-  function drawBird(g: Graphics, u: number, flap: number, color: number) {
-    g.clear();
-    const c = { color };
-    const tipY = -flap * 0.6 * u; // up-stroke → wingtips up (negative)
-    const midY = -flap * 0.22 * u;
-    const span = 1.02 * u;
-    const sweep = 0.34 * u; // wings rake backward (downward in this view)
-    // left wing — a tapered, slightly swept blade
-    g.moveTo(-0.05 * u, 0.04 * u)
-      .quadraticCurveTo(-0.52 * span, midY + sweep * 0.4, -span, tipY + sweep)
-      .quadraticCurveTo(-0.55 * span, midY + 0.16 * u, -0.05 * u, 0.12 * u)
-      .closePath()
-      .fill(c);
-    // right wing — mirror
-    g.moveTo(0.05 * u, 0.04 * u)
-      .quadraticCurveTo(0.52 * span, midY + sweep * 0.4, span, tipY + sweep)
-      .quadraticCurveTo(0.55 * span, midY + 0.16 * u, 0.05 * u, 0.12 * u)
-      .closePath()
-      .fill(c);
-    // little body + head + a hint of tail
-    g.ellipse(0, 0.04 * u, 0.1 * u, 0.18 * u).fill(c);
-    g.circle(0, -0.12 * u, 0.08 * u).fill(c);
-    g.poly([-0.06 * u, 0.16 * u, 0, 0.34 * u, 0.06 * u, 0.16 * u]).fill(c);
   }
 
   // Redraw the gradient sky for the current palette + hour.
@@ -538,10 +497,9 @@ export async function mountWorldPixi(
         t.s.tint = inkTint;
       }
     }
-    // flock birds fade toward the sky with depth so far ones nearly dissolve
-    // (the per-frame redraw in onTick picks up this colour next frame)
-    for (const b of flock) {
-      b.color = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, b.depth * 0.45);
+    // floating motes take a soft, pale tuft/glow colour
+    for (const d of dust) {
+      d.g.tint = mix(pal.tuft, pal.glow, 0.3);
     }
     // clouds take the palette's cloud colour, warmed slightly toward the glow
     for (const c of clouds) {
@@ -576,7 +534,6 @@ export async function mountWorldPixi(
     wanderers = [];
     swayers = [];
     dust = [];
-    flock = [];
     clouds = [];
     tumble = null;
     groundG = null;
@@ -784,49 +741,15 @@ export async function mountWorldPixi(
       groundG = g;
     }
 
-    // ---- GROUND DETAIL — scattered pebbles + stipple dashes + little green
-    // sprouts texture the bare sand and give a clear near→far read (denser and
-    // bigger toward the bottom). Two cheap Graphics (one rock-toned, one plant-
-    // toned), baked once and re-tinted with the palette. Sits behind the plants.
+    // ---- GROUND DETAIL — just a few little green sprouts on the sand. (The
+    // scattered pebble "dots" read as noise and were removed; the foreground
+    // rocks below carry the ground texture instead.)
     {
       const L = addLayer(0.74);
       const lw = localW(0.74);
       const r = rnd(173);
       const yTop = HZ + groundSpan * 0.46; // just below the formation bases
       const band = H - yTop;
-      const peb = new Graphics();
-      const nPeb = Math.round(lw / 11);
-      for (let k = 0; k < nPeb; k++) {
-        const d = r(); // 0 = far/top, 1 = near/bottom
-        const x = r() * lw;
-        const y = yTop + Math.pow(d, 0.72) * band;
-        const roll = r();
-        if (roll < 0.48) {
-          // pebble
-          const sz = 1.1 + d * d * 5;
-          peb.ellipse(x, y, sz, sz * 0.6).fill({ color: 0xffffff });
-        } else if (roll < 0.78) {
-          // dry-grass tick / slanted dash
-          const len = 1.6 + d * 4.5;
-          peb
-            .moveTo(x, y)
-            .lineTo(x + (r() - 0.5) * 1.6, y - len)
-            .stroke({ color: 0xffffff, width: 0.8 + d * 0.6 });
-        } else if (roll < 0.93) {
-          // fine speck
-          peb.circle(x, y, 0.6 + d * 0.8).fill({ color: 0xffffff });
-        } else {
-          // occasional bigger stone, only in the nearer band
-          const sz = 3 + d * 6;
-          const sy = yTop + (0.5 + d * 0.5) * band;
-          peb.ellipse(x, sy, sz, sz * 0.55).fill({ color: 0xffffff });
-        }
-      }
-      peb.alpha = 0.55;
-      peb.tint = mix(pal.rock, pal.sandDeep, 0.45);
-      L.c.addChild(peb);
-      groundDetail.push({ g: peb, kind: "rock" });
-
       const spr = new Graphics();
       const nSpr = Math.round(lw / 90);
       for (let k = 0; k < nSpr; k++) {
@@ -1046,45 +969,6 @@ export async function mountWorldPixi(
       }
     }
 
-    // ---- BIRD FLOCK — 2–3 small birds gliding one way at staggered depths ----
-    // Each bird is a different size/speed/altitude (depth-graded), bobs gently and
-    // independently, never flips, and respawns from the left after a stagger so
-    // the flock is loose and asynchronous.
-    {
-      const L = addLayer(0.16);
-      const r = rnd(113);
-      const n = 2 + (r() > 0.4 ? 1 : 0); // 2 or 3
-      for (let i = 0; i < n; i++) {
-        // depth 0 = nearer/bigger/faster/lower, 1 = farther/smaller/slower/higher
-        const depth = (i + r() * 0.6) / n;
-        // birds are drawn procedurally facing +x (right) so a flap can never flip
-        // their facing. Size unit scales with depth (nearer = bigger).
-        const u = 19 + (1 - depth) * 15;
-        const color = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, depth * 0.45);
-        const g = new Graphics();
-        L.c.addChild(g);
-        drawBird(g, u, 0, color);
-        const startX = -120 - r() * 220;
-        flock.push({
-          g,
-          u,
-          color,
-          x: startX,
-          y0: H * (0.14 + depth * 0.16 + r() * 0.04),
-          depth,
-          speed: 44 + (1 - depth) * 46 + r() * 16,
-          span: W + 220,
-          bobAmp: 6 + (1 - depth) * 10,
-          bobSp: 0.9 + r() * 0.9,
-          bobPh: r() * 6.28,
-          flapSp: 6 + r() * 3,
-          flapPh: r() * 6.28,
-          spawnDelay: i * (1.6 + r() * 2.4),
-          startX,
-        });
-      }
-    }
-
     // ---- TUMBLEWEED rolling one way across the foreground, respawning ----
     {
       const L = addLayer(1.0);
@@ -1101,22 +985,37 @@ export async function mountWorldPixi(
       };
     }
 
-    // ---- DUST (floating, animated) ----
+    // ---- FLOATING MOTES — soft pale particles drifting slowly UP and sideways,
+    // fading in and out (the ambient makemepulse motes; the sky's gentle motion).
     {
-      const L = addLayer(0.55);
-      const lw = localW(0.55);
+      const L = addLayer(0.5);
+      const lw = localW(0.5);
+      dustSpan = lw;
       const r = rnd(109);
-      // cap the mote count so per-frame work stays bounded on very wide worlds
-      const count = Math.min(coarse ? 26 : 48, Math.round(lw / 120));
+      const count = Math.min(coarse ? 34 : 64, Math.round(lw / 80));
       for (let i = 0; i < count; i++) {
-        const x = lw * (i / count) + r() * 70;
-        const y = H * (0.12 + r() * 0.5);
+        const x = lw * (i / count) + (r() - 0.5) * 80;
+        const y = r() * H;
+        const rad = 1 + r() * 2.4;
         const g = new Graphics();
-        g.circle(0, 0, 0.8 + r() * 1.6).fill({ color: pal.inkSoft, alpha: 0.08 + r() * 0.12 });
+        g.circle(0, 0, rad * 2.1).fill({ color: 0xffffff, alpha: 0.22 });
+        g.circle(0, 0, rad).fill({ color: 0xffffff, alpha: 1 });
         g.x = x;
         g.y = y;
+        g.tint = mix(pal.tuft, pal.glow, 0.3);
         L.c.addChild(g);
-        dust.push({ g, x, y, amp: 6 + r() * 14, sp: 0.2 + r() * 0.5, ph: r() * 6.28 });
+        dust.push({
+          g,
+          x,
+          y,
+          rise: 5 + r() * 12,
+          drift: 8 + r() * 20,
+          sp: 0.15 + r() * 0.35,
+          ph: r() * 6.28,
+          fadeSp: 0.2 + r() * 0.35,
+          fadePh: r() * 6.28,
+          maxA: 0.12 + r() * 0.26,
+        });
       }
     }
 
@@ -1152,7 +1051,7 @@ export async function mountWorldPixi(
     // Ground critters stand STILL. Single-frame sprites can't be walked, hopped
     // or turned convincingly (it reads as janky "flipping back and forth"), so
     // they hold a natural resting pose. Only a whisper-subtle breathing pulse —
-    // the actual life in the scene is the flapping birds, the swaying plants and
+    // the actual life in the scene is the drifting motes, the swaying plants and
     // the parallax. No translation, no hopping, no flipping.
     for (const w of wanderers) {
       w.s.x = w.x;
@@ -1163,33 +1062,6 @@ export async function mountWorldPixi(
       // carried by the sign of scale.x, set once at build).
       const breathe = 1 + 0.012 * Math.sin(time * 1.1 + w.gaitPhase);
       w.s.scale.y = w.sc * breathe;
-    }
-
-    // bird flock: each glides one direction, bobs independently, never flips,
-    // respawns from the left after its own stagger.
-    {
-      const Hh = core.layout.H;
-      for (const b of flock) {
-        if (b.spawnDelay > 0) {
-          b.spawnDelay -= dt;
-          b.g.visible = false;
-          continue;
-        }
-        b.g.visible = true;
-        b.x += b.speed * dt;
-        if (b.x > b.span) {
-          // re-enter from the left at a fresh altitude/speed after a short stagger
-          b.x = b.startX - Math.random() * 160;
-          b.y0 = Hh * (0.13 + Math.random() * 0.2);
-          b.speed = 44 + Math.random() * 60;
-          b.spawnDelay = 0.5 + Math.random() * 3.5;
-        }
-        b.g.x = b.x;
-        b.g.y = b.y0 + Math.sin(time * b.bobSp + b.bobPh) * b.bobAmp;
-        // smooth wing-flap: redraw the (always right-facing) bird at the current
-        // wing elevation — a clean up/down beat that never flips facing.
-        drawBird(b.g, b.u, Math.sin(time * b.flapSp + b.flapPh), b.color);
-      }
     }
 
     // tumbleweed rolls ONE way across the foreground, respawning at random gaps
@@ -1213,12 +1085,16 @@ export async function mountWorldPixi(
       }
     }
 
-    // drifting dust
+    // floating motes: rise slowly, drift sideways, fade in/out, loop from the bottom
     for (const d of dust) {
-      const dx = Math.sin(time * d.sp + d.ph) * d.amp;
-      const dy = Math.cos(time * d.sp * 0.7 + d.ph) * d.amp * 0.6;
-      d.g.x = d.x + dx;
-      d.g.y = d.y + dy;
+      d.y -= d.rise * dt;
+      if (d.y < -12) {
+        d.y = core.layout.H + 12;
+        d.x = Math.random() * dustSpan;
+      }
+      d.g.x = d.x + Math.sin(time * d.sp + d.ph) * d.drift;
+      d.g.y = d.y;
+      d.g.alpha = d.maxA * (0.5 + 0.5 * Math.sin(time * d.fadeSp + d.fadePh));
     }
 
     // clouds drift slowly across the upper sky, wrapping within their layer
