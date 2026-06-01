@@ -166,7 +166,7 @@ export async function mountWorldPixi(
   const textures: Record<AssetKey, Texture> = {} as Record<AssetKey, Texture>;
   await Promise.all(
     ALL_KEYS.map(async (k) => {
-      textures[k] = await Assets.load(`${BASE}${k}.png`);
+      textures[k] = await Assets.load(`${BASE}${k}.webp`);
     }),
   );
 
@@ -179,7 +179,6 @@ export async function mountWorldPixi(
     autoDensity: true,
     resizeTo: window,
     powerPreference: "high-performance",
-    preserveDrawingBuffer: true,
   });
 
   let destroyed = false;
