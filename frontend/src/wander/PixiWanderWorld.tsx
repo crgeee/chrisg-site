@@ -111,6 +111,9 @@ export default function PixiWanderWorld() {
             <button className="customize__auto">Use my local time</button>
             <button className="customize__done">Done</button>
           </div>
+          <p className="customize__colophon">
+            Landscape inspired by the red-rock country around Sedona, Arizona.
+          </p>
         </div>
       </div>
     </div>

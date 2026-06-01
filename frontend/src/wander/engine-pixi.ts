@@ -80,44 +80,70 @@ type Layer = { c: Container; factor: number };
 // per-instance hue nudge so no two formations tint identically.
 type Tintable = {
   s: Sprite;
-  role: "formation" | "plant" | "ink";
+  role: "formation" | "plant" | "darkPlant" | "ink";
   haze: number;
   jitter: number;
+  // depth band drives WHICH haze colour and how warm the base reads:
+  //  "far"  → cool/pale far-haze, pushed toward the sky (recedes hard)
+  //  "mid"  → standard horizon haze
+  //  "near" → warmer, crisper base (the hero formations come forward)
+  band?: "far" | "mid" | "near";
 };
 
-// Wandering ground critter (roadrunner / lizard): walk + pause + flip.
+// Wandering ground critter (roadrunner / lizard / jackrabbit). Each has a small
+// state machine — WALK in one direction for a randomised stretch → PAUSE/idle for
+// a randomised stretch → maybe TURN (and only THEN flip the sprite) → continue —
+// so motion reads as a purposeful animal, never a slider oscillating. The
+// jackrabbit additionally arcs into discrete hops while walking. Every field
+// (speed, pause/walk durations, phase) is seeded per-instance so the critters are
+// never synchronised, and each is bounded to [min,max] so it can't wander off.
 type Wanderer = {
   s: Sprite;
+  kind: "roadrunner" | "lizard" | "jackrabbit";
   baseY: number;
   x: number;
-  dir: number;
+  dir: 1 | -1;
   speed: number;
   sc: number;
   state: "walk" | "pause";
-  timer: number;
+  timer: number; // seconds left in the current state
+  walkLo: number; // randomised walk-duration range
+  walkHi: number;
+  pauseLo: number; // randomised pause-duration range
+  pauseHi: number;
+  turnChance: number; // probability of reversing when a walk starts
+  // gait: gentle vertical bob (roadrunner/lizard) or discrete hop arcs (rabbit)
+  gaitPhase: number;
+  gaitSp: number;
   bobAmp: number;
-  bobSp: number;
-  phase: number;
+  hop: number; // peak hop height for the jackrabbit (0 for others)
+  hopPhase: number; // phase offset so each hop cadence differs
+  hopSp: number; // hop cadence (Hz-ish) while walking
   min: number;
   max: number;
 };
 
-// Hopping jackrabbit.
-type Hopper = {
-  s: Sprite;
-  baseX: number;
-  baseY: number;
-  sc: number;
-  dir: number;
-  t: number;
-  period: number;
-  hop: number;
-  dist: number;
-  fromX: number;
-};
-
 // Plant that sways about its base.
-type Swayer = { s: Sprite; amp: number; sp: number; ph: number };
+type Swayer = { s: Sprite; amp: number; sp: number; ph: number; gust: number };
+
+// A small gliding bird in the loose flock — one direction, gentle altitude bob,
+// staggered respawn. Depth controls size/speed/tint so the flock reads layered.
+type FlockBird = {
+  s: Sprite;
+  x: number;
+  y0: number;
+  depth: number; // 0 near → 1 far, drives size/speed/altitude/tint
+  baseScale: number; // resting scale (depth-graded)
+  speed: number;
+  span: number; // x past which it respawns
+  bobAmp: number;
+  bobSp: number;
+  bobPh: number;
+  flapSp: number;
+  flapPh: number;
+  spawnDelay: number; // seconds before it (re)enters from the left
+  startX: number; // x it (re)enters at
+};
 
 // Drifting dust mote.
 type Dust = { g: Graphics; x: number; y: number; amp: number; sp: number; ph: number };
@@ -194,12 +220,12 @@ export async function mountWorldPixi(
   let layers: Layer[] = [];
   let tintables: Tintable[] = [];
   let wanderers: Wanderer[] = [];
-  let hoppers: Hopper[] = [];
   let swayers: Swayer[] = [];
   let dust: Dust[] = [];
-  let bird: { s: Sprite; x: number; y0: number; speed: number; span: number } | null = null;
-  let tumble: { s: Sprite; x: number; y: number; speed: number; spin: number; sc: number } | null = null;
+  let flock: FlockBird[] = [];
+  let tumble: { s: Sprite; x: number; y: number; speed: number; spin: number; sc: number; delay: number } | null = null;
   let groundG: Graphics | null = null; // near sand band — re-tinted with the palette
+  let nearDuneG: Graphics | null = null; // near-foreground dune lip (fastest parallax)
 
   // ---- helpers -------------------------------------------------------------
   function addLayer(factor: number): Layer {
@@ -220,7 +246,7 @@ export async function mountWorldPixi(
     targetH: number,
     haze: number,
     jitter: number,
-    opts: { alpha?: number; flip?: boolean } = {},
+    opts: { alpha?: number; flip?: boolean; band?: "far" | "mid" | "near" } = {},
   ): Sprite {
     const tex = textures[key];
     const s = new Sprite(tex);
@@ -231,7 +257,7 @@ export async function mountWorldPixi(
     s.y = baseY;
     if (opts.alpha != null) s.alpha = opts.alpha;
     L.c.addChild(s);
-    tintables.push({ s, role: "formation", haze, jitter });
+    tintables.push({ s, role: "formation", haze, jitter, band: opts.band ?? "mid" });
     return s;
   }
 
@@ -256,6 +282,14 @@ export async function mountWorldPixi(
     L.c.addChild(s);
     tintables.push({ s, role, haze: 0, jitter: 0 });
     return s;
+  }
+
+  // The critter PNGs (roadrunner / lizard / jackrabbit) are all drawn facing
+  // LEFT. To make a critter FACE the way it travels (never moonwalk), the sprite
+  // is shown un-flipped (+scale) when moving left and mirrored (−scale) when
+  // moving right. `setFacing` is the single source of truth for that mapping.
+  function setFacing(w: Wanderer) {
+    w.s.scale.x = -w.dir * w.sc;
   }
 
   // The sun's normalised screen position for a given hour: it rises low in the
@@ -283,9 +317,21 @@ export async function mountWorldPixi(
     return { x, y, up: true };
   }
 
-  // The colour the haze blends toward: the pale band just above the horizon.
+  // The colour the haze blends toward: the pale, slightly cool band just above
+  // the horizon. Distant landforms are blended hard toward this so they dissolve
+  // into the sky — the core of the atmospheric-recession read.
   function hazeColor(): number {
-    return mix(pal.skyBot, pal.glow, 0.4);
+    return mix(mix(pal.skyBot, pal.glow, 0.35), pal.skyTop, 0.18);
+  }
+  // A cooler, paler far-haze for the deepest ridges so they read distinctly
+  // bluer/colder than the warm near hero formations (aerial perspective).
+  function farHazeColor(): number {
+    return mix(hazeColor(), pal.skyTop, 0.32);
+  }
+  // Pack a 24-bit tint + alpha into an `rgba()` string (a ColorSource Pixi
+  // accepts), so gradient stops can carry their own opacity.
+  function rgba(c: number, a: number): string {
+    return `rgba(${(c >> 16) & 0xff},${(c >> 8) & 0xff},${c & 0xff},${a})`;
   }
 
   // Redraw the gradient sky for the current palette + hour.
@@ -376,22 +422,36 @@ export async function mountWorldPixi(
     if (destroyed) return;
     const base = formationBase();
     const haze = hazeColor();
+    const farHaze = farHazeColor();
     const inkTint = mix(pal.ink, pal.landMid, 0.12);
     if (groundG) groundG.tint = mix(pal.sand, pal.sandDeep, 0.4);
+    if (nearDuneG) nearDuneG.tint = mix(pal.sandDeep, pal.rock, 0.22);
     for (const t of tintables) {
       if (t.role === "formation") {
-        // jitter shifts slightly cooler (toward landFar) or warmer (toward hill)
+        const band = t.band ?? "mid";
+        // jitter shifts slightly cooler (toward landFar) or warmer (toward hill);
+        // near formations bias warmer/crisper, far ones bias cooler/paler.
         const warm = t.jitter >= 0;
-        const nudge = warm
+        let nudge = warm
           ? mix(base, pal.hill, Math.min(0.3, t.jitter))
           : mix(base, pal.landFar, Math.min(0.3, -t.jitter));
-        t.s.tint = mix(nudge, haze, t.haze);
+        if (band === "near") nudge = mix(nudge, pal.hill, 0.22); // warmer hero rock
+        else if (band === "far") nudge = mix(nudge, pal.landFar, 0.18); // cooler/paler
+        const into = band === "far" ? farHaze : haze;
+        t.s.tint = mix(nudge, into, t.haze);
       } else if (t.role === "plant") {
         t.s.tint = mix(pal.plant, pal.sage, 0.4);
+      } else if (t.role === "darkPlant") {
+        // near-foreground silhouette plants: darker, warmer-shadowed green
+        t.s.tint = mix(mix(pal.plant, pal.sage, 0.3), pal.ink, 0.42);
       } else {
         // critters: keep them as ink outlines, barely shifted by time of day
         t.s.tint = inkTint;
       }
+    }
+    // flock birds fade toward the sky with depth so far ones nearly dissolve
+    for (const b of flock) {
+      b.s.tint = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, b.depth * 0.45);
     }
   }
 
@@ -420,12 +480,12 @@ export async function mountWorldPixi(
     layers = [];
     tintables = [];
     wanderers = [];
-    hoppers = [];
     swayers = [];
     dust = [];
-    bird = null;
+    flock = [];
     tumble = null;
     groundG = null;
+    nearDuneG = null;
 
     const { W, H, HZ, stationStep, maxScroll, N } = core.layout;
     const localW = (factor: number) => Math.ceil(maxScroll * factor + W + 200);
@@ -439,90 +499,138 @@ export async function mountWorldPixi(
     Lsky.c.addChild(skyG, sunG, moonG);
     drawSky();
 
-    // ---- FAR SKYLINE — several SMALL hazed instances with gaps (no tiling) ----
-    // A believable distant ridge: a varied mix of the `range` asset and small
-    // formations, each at its own scale/flip, heavily hazed toward the sky, sat
-    // right on the horizon with breathing room between them.
+    // The whole landscape is built as a deep stack of parallax bands. As bands
+    // recede they get: SMALLER, HAZIER (tint pushed harder toward the haze/sky
+    // colour, lower alpha), COOLER (far band uses the cool far-haze), BLURRIER and
+    // SLOWER (lower parallax factor). As they come forward they get larger,
+    // crisper, warmer and faster. The factors are pulled apart far more than the
+    // old build so the recession actually reads.
+
+    // ---- FAR SKYLINE — a faint paper-cut ridge dissolving into the sky -------
+    // The deepest layer: tiny, very pale, cool instances sat right on the horizon
+    // with generous gaps. Barely-there — it just gives the horizon a soft tooth.
     {
-      const L = addLayer(0.1);
-      const lw = localW(0.1);
-      const r = rnd(31);
+      const L = addLayer(0.04);
+      const lw = localW(0.04);
+      const r = rnd(29);
       const pick = makePicker(r);
-      const baseY = HZ + groundSpan * 0.015;
+      const baseY = HZ + groundSpan * 0.004;
       let x = -W * 0.1;
       while (x < lw + W * 0.1) {
-        const useRange = r() < 0.45;
-        if (useRange) {
-          // a short slice of the range asset as a low distant ridge
-          const targetH = groundSpan * (0.07 + r() * 0.05);
-          placeFormation(L, RANGE, x, baseY, targetH, 0.78 + r() * 0.12, (r() - 0.5) * 0.3, {
-            alpha: 0.55 + r() * 0.12,
-            flip: r() > 0.5,
+        if (r() < 0.5) {
+          const targetH = groundSpan * (0.04 + r() * 0.035);
+          placeFormation(L, RANGE, x, baseY, targetH, 0.9 + r() * 0.08, (r() - 0.5) * 0.2, {
+            alpha: 0.34 + r() * 0.1, flip: r() > 0.5, band: "far",
           });
-          x += (340 + r() * 320) * (W / 1200);
+          x += (420 + r() * 380) * (W / 1200);
         } else {
-          const targetH = groundSpan * (0.1 + r() * 0.08);
-          placeFormation(L, pick(), x, baseY, targetH, 0.7 + r() * 0.12, (r() - 0.5) * 0.4, {
-            alpha: 0.55 + r() * 0.14,
-            flip: r() > 0.5,
+          const targetH = groundSpan * (0.06 + r() * 0.05);
+          placeFormation(L, pick(), x, baseY, targetH, 0.86 + r() * 0.1, (r() - 0.5) * 0.3, {
+            alpha: 0.32 + r() * 0.12, flip: r() > 0.5, band: "far",
           });
-          x += (190 + r() * 240) * (W / 1200);
+          x += (240 + r() * 300) * (W / 1200);
         }
-        // occasional larger gap so the ridge doesn't read as evenly spaced
-        if (r() < 0.22) x += (160 + r() * 220) * (W / 1200);
+        if (r() < 0.3) x += (220 + r() * 260) * (W / 1200);
       }
-      if (!coarse) L.c.filters = [new BlurFilter({ strength: 2 })];
+      // single low-quality blur pass — cheap, and the far ridge is faint anyway
+      if (!coarse) L.c.filters = [new BlurFilter({ strength: 2, quality: 1 })];
     }
 
-    // ---- DISTANT formations — small, hazy, slow parallax ----
+    // ---- ATMOSPHERIC HAZE BAND — a soft horizontal wash fading the far ridges
+    // into the horizon colour. Sits just above the far bases, between the far
+    // skyline and the first distant ridge, on its own slow layer.
     {
-      const L = addLayer(0.2);
-      const lw = localW(0.2);
+      const L = addLayer(0.06);
+      const lw = localW(0.06);
+      const g = new Graphics();
+      const top = HZ - groundSpan * 0.16;
+      const bandH = groundSpan * 0.3;
+      const far = farHazeColor();
+      const grad = new FillGradient({
+        type: "linear",
+        start: { x: 0, y: 0 },
+        end: { x: 0, y: 1 },
+        colorStops: [
+          { offset: 0, color: rgba(far, 0) },
+          { offset: 0.55, color: rgba(far, coarse ? 0.5 : 0.62) },
+          { offset: 1, color: rgba(hazeColor(), 0) },
+        ],
+      });
+      g.rect(0, top, lw, bandH).fill(grad);
+      L.c.addChild(g);
+    }
+
+    // ---- DISTANT RIDGE A — small, very hazy, cool, slow ---------------------
+    {
+      const L = addLayer(0.12);
+      const lw = localW(0.12);
       const r = rnd(43);
       const pick = makePicker(r);
-      const baseY = HZ + groundSpan * 0.06;
-      const step = Math.max(300, W * 0.34);
-      for (let x = step * 0.4; x < lw; x += step * (0.7 + r() * 0.7)) {
-        const targetH = groundSpan * (0.18 + r() * 0.1);
-        placeFormation(L, pick(), x + (r() - 0.5) * 60, baseY + (r() - 0.5) * 10, targetH,
-          0.4 + r() * 0.18, (r() - 0.5) * 0.6, { alpha: 0.78 + r() * 0.12, flip: r() > 0.5 });
+      const baseY = HZ + groundSpan * 0.04;
+      const step = Math.max(260, W * 0.3);
+      for (let x = step * 0.3; x < lw; x += step * (0.6 + r() * 0.7)) {
+        const targetH = groundSpan * (0.12 + r() * 0.08);
+        placeFormation(L, pick(), x + (r() - 0.5) * 70, baseY + (r() - 0.5) * 8, targetH,
+          0.66 + r() * 0.14, (r() - 0.5) * 0.5, {
+            alpha: 0.6 + r() * 0.12, flip: r() > 0.5, band: "far",
+          });
       }
-      if (!coarse) L.c.filters = [new BlurFilter({ strength: 0.8 })];
+      if (!coarse) L.c.filters = [new BlurFilter({ strength: 1.2, quality: 1 })];
+    }
+
+    // ---- DISTANT RIDGE B — a touch bigger/closer, still hazy, slow ----------
+    {
+      const L = addLayer(0.22);
+      const lw = localW(0.22);
+      const r = rnd(47);
+      const pick = makePicker(r);
+      const baseY = HZ + groundSpan * 0.085;
+      const step = Math.max(320, W * 0.36);
+      for (let x = step * 0.4; x < lw; x += step * (0.7 + r() * 0.6)) {
+        const targetH = groundSpan * (0.2 + r() * 0.11);
+        placeFormation(L, pick(), x + (r() - 0.5) * 60, baseY + (r() - 0.5) * 10, targetH,
+          0.42 + r() * 0.16, (r() - 0.5) * 0.7, {
+            alpha: 0.82 + r() * 0.12, flip: r() > 0.5, band: "mid",
+          });
+      }
+      // no blur here — the haze band + alpha grading already soften this ridge,
+      // and a third full-width filter pass isn't worth the GPU cost.
     }
 
     // ---- MID formations — medium, light haze, medium parallax ----
     {
-      const L = addLayer(0.34);
-      const lw = localW(0.34);
+      const L = addLayer(0.36);
+      const lw = localW(0.36);
       const r = rnd(53);
       const pick = makePicker(r);
-      const baseY = HZ + groundSpan * 0.14;
-      const step = Math.max(420, W * 0.46);
+      const baseY = HZ + groundSpan * 0.15;
+      const step = Math.max(440, W * 0.48);
       for (let x = step * 0.3; x < lw; x += step * (0.7 + r() * 0.6)) {
         // sometimes a tight pair (e.g. twins-like grouping of different types)
         const count = r() < 0.28 ? 2 : 1;
         for (let j = 0; j < count; j++) {
-          const targetH = groundSpan * (0.3 + r() * 0.16);
+          const targetH = groundSpan * (0.34 + r() * 0.16);
           placeFormation(L, pick(), x + j * (110 + r() * 60), baseY + (r() - 0.5) * 14, targetH,
-            0.16 + r() * 0.14, (r() - 0.5) * 0.8, { alpha: 0.94, flip: r() > 0.5 });
+            0.14 + r() * 0.12, (r() - 0.5) * 0.85, {
+              alpha: 0.95, flip: r() > 0.5, band: "mid",
+            });
         }
       }
     }
 
-    // ---- HERO formations — big, saturated, near each station, fast parallax ----
+    // ---- HERO formations — big, warm, crisp, near each station, fast parallax ----
     {
-      const L = addLayer(0.5);
+      const L = addLayer(0.56);
       const r = rnd(61);
       const pick = makePicker(r);
-      const groundY = HZ + groundSpan * 0.28;
+      const groundY = HZ + groundSpan * 0.3;
       for (let i = 0; i < N + 1; i++) {
         const count = 1 + (r() > 0.55 ? 1 : 0);
         for (let j = 0; j < count; j++) {
-          const targetH = groundSpan * (0.52 + r() * 0.28);
+          const targetH = groundSpan * (0.56 + r() * 0.3);
           const x = i * stationStep + (r() - 0.5) * stationStep * 0.55;
-          placeFormation(L, pick(), x, groundY, targetH, r() * 0.08, (r() - 0.5) * 1, {
-            alpha: 0.99,
-            flip: r() > 0.5,
+          placeFormation(L, pick(), x, groundY, targetH, r() * 0.05, (r() - 0.5) * 1, {
+            alpha: 1, flip: r() > 0.5, band: "near",
           });
         }
       }
@@ -568,92 +676,208 @@ export async function mountWorldPixi(
         const s = placeByWidth(L, key, x, baseY, w, "plant", { flip: r() > 0.5 });
         // sway pivots near the base: nudge the anchor up so rotation looks rooted
         s.anchor.set(0.5, 0.97);
-        swayers.push({ s, amp: 0.012 + r() * 0.026, sp: 0.5 + r() * 0.7, ph: r() * 6.28 });
+        // each plant sways at its own rate/phase, with a slow secondary "gust"
+        // beat so the field never pulses in unison.
+        swayers.push({
+          s,
+          amp: 0.012 + r() * 0.026,
+          sp: 0.5 + r() * 0.7,
+          ph: r() * 6.28,
+          gust: 0.11 + r() * 0.17,
+        });
+      }
+    }
+
+    // ---- NEAR-FOREGROUND LIP — a low dune edge + a couple of close, larger,
+    // slightly darker plants/rocks that parallax the FASTEST, bracketing the
+    // depth so the near/far read is unmistakable. Sits in front of the critters'
+    // ground but behind the panels visually via draw order below.
+    {
+      const L = addLayer(1.18);
+      const lw = localW(1.18);
+      const r = rnd(127);
+      // the dune lip itself — a dark, soft sand edge hugging the bottom
+      const g = new Graphics();
+      const seg = Math.max(8, Math.round(lw / 200));
+      const lipBase = H - groundSpan * 0.05;
+      const amp = groundSpan * 0.06;
+      g.moveTo(0, H + 4);
+      g.lineTo(0, lipBase);
+      for (let i = 0; i <= seg; i++) {
+        const x = lw * (i / seg);
+        const y =
+          lipBase - Math.sin((i / seg) * Math.PI * 3.1 + r() * 6) * amp - r() * amp * 0.5;
+        g.lineTo(x, y);
+      }
+      g.lineTo(lw, H + 4);
+      g.lineTo(0, H + 4);
+      g.fill({ color: 0xffffff });
+      g.tint = mix(pal.sandDeep, pal.rock, 0.22);
+      L.c.addChild(g);
+      nearDuneG = g;
+      // a couple of close, larger, slightly darker silhouette plants on the lip
+      const nearPlants: AssetKey[] = ["agave", "saguaro", "agave"];
+      const nNear = 3;
+      for (let i = 0; i < nNear; i++) {
+        const key = nearPlants[i % nearPlants.length];
+        const x = lw * ((i + 0.2 + r() * 0.6) / nNear);
+        const baseY = H + groundSpan * 0.01;
+        const w = key === "saguaro" ? 120 + r() * 60 : 150 + r() * 80;
+        // near plants read darker (silhouette-y) — their own retint role
+        const s = placeByWidth(L, key, x, baseY, w, "darkPlant", { flip: r() > 0.5 });
+        s.anchor.set(0.5, 0.98);
+        swayers.push({
+          s,
+          amp: 0.01 + r() * 0.018,
+          sp: 0.4 + r() * 0.5,
+          ph: r() * 6.28,
+          gust: 0.09 + r() * 0.12,
+        });
       }
     }
 
     // ---- CONTENT PANELS (DOM) — above the canvas, parallaxed by worldCore ----
     core.buildPanels(panelHolder);
 
-    // ---- NEAR FOREGROUND CRITTERS ----
+    // ---- NEAR FOREGROUND CRITTERS — each a bounded, state-machine wanderer ----
     {
       const L = addLayer(1.0);
       const lw = localW(1.0);
       const r = rnd(97);
 
-      // roadrunners & lizards wander the foreground
-      const groundCritters: AssetKey[] = ["roadrunner", "lizard", "roadrunner", "lizard"];
-      const nWander = 5;
+      // roadrunners & lizards roam their own region of the world. No two share a
+      // speed/phase/cadence, so they never march in step.
+      const groundCritters: ("roadrunner" | "lizard")[] = [
+        "roadrunner", "lizard", "roadrunner", "lizard", "roadrunner",
+      ];
+      const nWander = groundCritters.length;
       for (let i = 0; i < nWander; i++) {
-        const key = groundCritters[i % groundCritters.length];
-        const sc = key === "lizard" ? 0.18 + r() * 0.08 : 0.34 + r() * 0.14;
+        const kind = groundCritters[i];
+        const sc = kind === "lizard" ? 0.18 + r() * 0.08 : 0.34 + r() * 0.14;
         const baseY = H - 12 - r() * groundSpan * 0.22;
+        // each owns a slice of the world (with a little overlap) and starts somewhere
+        // random inside it, facing a random way, already mid-walk or mid-pause.
         const min = (i / nWander) * lw + 40;
         const max = ((i + 1) / nWander) * lw - 40;
         const x = min + (max - min) * r();
-        const s = placeByWidth(L, key, x, baseY, textures[key].width * sc, "ink", {
+        const startWalking = r() > 0.4;
+        const s = placeByWidth(L, kind, x, baseY, textures[kind].width * sc, "ink", {
           flip: r() > 0.5,
         });
         s.anchor.set(0.5, 1);
-        wanderers.push({
-          s,
-          baseY,
-          x,
-          dir: r() > 0.5 ? 1 : -1,
-          speed: (key === "roadrunner" ? 26 : 14) + r() * 12,
+        const dir: 1 | -1 = r() > 0.5 ? 1 : -1;
+        const w: Wanderer = {
+          s, kind, baseY, x, dir,
+          speed: (kind === "roadrunner" ? 30 : 15) + r() * 14,
           sc,
-          state: "walk",
-          timer: 1 + r() * 2,
-          bobAmp: key === "roadrunner" ? 2.4 : 1.2,
-          bobSp: 6 + r() * 3,
-          phase: r() * 6.28,
-          min,
-          max,
-        });
+          state: startWalking ? "walk" : "pause",
+          timer: startWalking ? 1.2 + r() * 3 : 0.6 + r() * 2.2,
+          walkLo: kind === "roadrunner" ? 1.6 : 1.0,
+          walkHi: kind === "roadrunner" ? 4.5 : 3.2,
+          pauseLo: 0.7,
+          pauseHi: kind === "roadrunner" ? 2.6 : 3.4,
+          turnChance: 0.42,
+          gaitPhase: r() * 6.28,
+          gaitSp: (kind === "roadrunner" ? 9 : 6.5) + r() * 3,
+          bobAmp: kind === "roadrunner" ? 3.4 : 1.8,
+          hop: 0,
+          hopPhase: 0,
+          hopSp: 0,
+          min, max,
+        };
+        setFacing(w); // face travel direction from the start
+        wanderers.push(w);
       }
 
-      // jackrabbits hop periodically
+      // jackrabbits: same walk/pause machine, but their "gait" is a series of hop
+      // arcs while moving (and they sit still on a pause).
       for (let i = 0; i < 2; i++) {
+        const kind = "jackrabbit" as const;
         const sc = 0.16 + r() * 0.07;
-        const baseX = (i + 0.5) * (lw / 2) + (r() - 0.5) * 300;
         const baseY = H - 16 - r() * groundSpan * 0.16;
-        const s = placeByWidth(L, "jackrabbit", baseX, baseY, textures.jackrabbit.width * sc, "ink", {
+        const min = i * (lw / 2) + 60;
+        const max = (i + 1) * (lw / 2) - 60;
+        const x = min + (max - min) * r();
+        const startWalking = r() > 0.45;
+        const s = placeByWidth(L, kind, x, baseY, textures.jackrabbit.width * sc, "ink", {
           flip: r() > 0.5,
         });
         s.anchor.set(0.5, 1);
-        hoppers.push({
-          s,
-          baseX,
-          baseY,
+        const dir: 1 | -1 = r() > 0.5 ? 1 : -1;
+        const w: Wanderer = {
+          s, kind, baseY, x, dir,
+          speed: 26 + r() * 18,
           sc,
-          dir: r() > 0.5 ? 1 : -1,
-          t: r() * 3,
-          period: 2.4 + r() * 1.6,
+          state: startWalking ? "walk" : "pause",
+          timer: startWalking ? 1.4 + r() * 2.4 : 0.8 + r() * 2.4,
+          walkLo: 1.2,
+          walkHi: 3.0,
+          pauseLo: 1.0,
+          pauseHi: 3.6,
+          turnChance: 0.4,
+          gaitPhase: r() * 6.28,
+          gaitSp: 0,
+          bobAmp: 0,
           hop: 26 + r() * 18,
-          dist: 60 + r() * 50,
-          fromX: baseX,
+          hopPhase: r() * 6.28,
+          hopSp: 2.3 + r() * 1.0, // hops per second while moving
+          min, max,
+        };
+        setFacing(w);
+        wanderers.push(w);
+      }
+    }
+
+    // ---- BIRD FLOCK — 2–3 small birds gliding one way at staggered depths ----
+    // Each bird is a different size/speed/altitude (depth-graded), bobs gently and
+    // independently, never flips, and respawns from the left after a stagger so
+    // the flock is loose and asynchronous.
+    {
+      const L = addLayer(0.16);
+      const r = rnd(113);
+      const n = 2 + (r() > 0.4 ? 1 : 0); // 2 or 3
+      for (let i = 0; i < n; i++) {
+        // depth 0 = nearer/bigger/faster/lower, 1 = farther/smaller/slower/higher
+        const depth = (i + r() * 0.6) / n;
+        const baseScale = 0.13 * (0.55 + (1 - depth) * 0.55); // 0.13 ceiling, smaller when far
+        const s = placeByWidth(L, "bird", 0, 0, textures.bird.width * baseScale, "ink", {});
+        s.anchor.set(0.5, 0.5);
+        s.tint = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, depth * 0.45);
+        s.scale.set(baseScale);
+        const startX = -120 - r() * 220;
+        flock.push({
+          s,
+          x: startX,
+          y0: H * (0.14 + depth * 0.16 + r() * 0.04),
+          depth,
+          baseScale,
+          speed: 44 + (1 - depth) * 46 + r() * 16,
+          span: W + 220,
+          bobAmp: 6 + (1 - depth) * 10,
+          bobSp: 0.9 + r() * 0.9,
+          bobPh: r() * 6.28,
+          flapSp: 6 + r() * 3,
+          flapPh: r() * 6.28,
+          spawnDelay: i * (1.6 + r() * 2.4),
+          startX,
         });
       }
     }
 
-    // ---- BIRD flying across the sky (own slow layer) ----
-    {
-      const L = addLayer(0.2);
-      const sc = 0.32;
-      const s = placeByWidth(L, "bird", 0, 0, textures.bird.width * sc, "ink", {});
-      s.anchor.set(0.5, 0.5);
-      s.tint = mix(pal.ink, pal.skyTop, 0.25);
-      bird = { s, x: -200, y0: H * (0.18 + Math.random() * 0.12), speed: 60 + Math.random() * 30, span: W + 400 };
-    }
-
-    // ---- TUMBLEWEED rolling across the foreground ----
+    // ---- TUMBLEWEED rolling one way across the foreground, respawning ----
     {
       const L = addLayer(1.0);
       const sc = 0.22;
       const s = placeByWidth(L, "tumbleweed", -100, H - 30, textures.tumbleweed.width * sc, "plant", {});
       s.anchor.set(0.5, 0.5);
       s.tint = mix(pal.rock, pal.sand, 0.45);
-      tumble = { s, x: -100, y: H - 40, speed: 90 + Math.random() * 50, spin: 3 + Math.random() * 2, sc };
+      tumble = {
+        s, x: -100, y: H - 40,
+        speed: 90 + Math.random() * 50,
+        spin: 3 + Math.random() * 2,
+        sc,
+        delay: 1 + Math.random() * 6, // staggered first entrance
+      };
     }
 
     // ---- DUST (floating, animated) ----
@@ -661,7 +885,8 @@ export async function mountWorldPixi(
       const L = addLayer(0.55);
       const lw = localW(0.55);
       const r = rnd(109);
-      const count = Math.round(lw / 120);
+      // cap the mote count so per-frame work stays bounded on very wide worlds
+      const count = Math.min(coarse ? 26 : 48, Math.round(lw / 120));
       for (let i = 0; i < count; i++) {
         const x = lw * (i / count) + r() * 70;
         const y = H * (0.12 + r() * 0.5);
@@ -696,84 +921,127 @@ export async function mountWorldPixi(
   function animate(state: FrameState, dt: number) {
     const time = state.time;
 
-    // plants sway about their base
+    // plants sway about their base — each at its own rate/phase, modulated by a
+    // slow secondary "gust" beat so the field never pulses in unison.
     for (const sw of swayers) {
-      sw.s.rotation = Math.sin(time * sw.sp + sw.ph) * sw.amp;
+      const gust = 0.6 + 0.4 * Math.sin(time * sw.gust + sw.ph * 0.5);
+      sw.s.rotation = Math.sin(time * sw.sp + sw.ph) * sw.amp * gust;
     }
 
-    // wandering ground critters: walk / pause / flip, with a little bob
+    // ground critters: a small WALK → PAUSE → (maybe TURN) → WALK state machine.
+    // Direction only changes between bouts, and the sprite is flipped ONLY when it
+    // actually turns — so motion reads as a purposeful animal, not an oscillator.
     for (const w of wanderers) {
       w.timer -= dt;
       if (w.timer <= 0) {
         if (w.state === "walk") {
+          // settle into an idle pause
           w.state = "pause";
-          w.timer = 0.6 + Math.random() * 1.6;
+          w.timer = w.pauseLo + Math.random() * (w.pauseHi - w.pauseLo);
         } else {
+          // begin a new walk bout; sometimes pick a new heading first, then face it
           w.state = "walk";
-          w.timer = 1.2 + Math.random() * 2.4;
-          if (Math.random() < 0.5) w.dir *= -1;
+          w.timer = w.walkLo + Math.random() * (w.walkHi - w.walkLo);
+          if (Math.random() < w.turnChance) {
+            w.dir = (w.dir * -1) as 1 | -1;
+            setFacing(w); // flip ONLY on a real turn — and always toward travel
+          }
         }
       }
+
       if (w.state === "walk") {
         w.x += w.dir * w.speed * dt;
-        if (w.x < w.min) { w.x = w.min; w.dir = 1; }
-        if (w.x > w.max) { w.x = w.max; w.dir = -1; }
-      }
-      const bob = w.state === "walk" ? Math.abs(Math.sin(time * w.bobSp + w.phase)) * w.bobAmp : 0;
-      w.s.x = w.x;
-      w.s.y = w.baseY - bob;
-      w.s.scale.x = w.dir * w.sc;
-    }
-
-    // jackrabbits hop in arcs
-    for (const h of hoppers) {
-      h.t += dt;
-      const u = (h.t % h.period) / h.period; // 0..1 within a hop cycle
-      if (u < 0.55) {
-        const k = u / 0.55; // airborne portion
-        const arc = Math.sin(k * Math.PI);
-        h.s.x = h.fromX + h.dir * h.dist * k;
-        h.s.y = h.baseY - arc * h.hop;
-        h.s.scale.x = h.dir * h.sc;
-      } else {
-        // landed; settle, then pick the next hop target at the cycle wrap
-        h.s.y = h.baseY;
-        if (h.t >= h.period) {
-          h.t -= h.period;
-          h.fromX = h.s.x;
-          // turn around near the edges of its roaming band
-          if (h.fromX > h.baseX + 260) h.dir = -1;
-          else if (h.fromX < h.baseX - 260) h.dir = 1;
-          else if (Math.random() < 0.3) h.dir *= -1;
+        // bounce off the edges of its region — turn (and face) the new way to stay in
+        if (w.x < w.min) {
+          w.x = w.min;
+          if (w.dir < 0) { w.dir = 1; setFacing(w); }
+        } else if (w.x > w.max) {
+          w.x = w.max;
+          if (w.dir > 0) { w.dir = -1; setFacing(w); }
         }
       }
-    }
 
-    // bird glides across the sky, looping
-    if (bird) {
-      bird.x += bird.speed * dt;
-      if (bird.x > bird.span) {
-        bird.x = -200;
-        bird.y0 = core.layout.H * (0.16 + Math.random() * 0.16);
+      // gait animation — believable per-animal locomotion, NOT a vertical bounce:
+      //  • roadrunner: glides forward smoothly with a small rhythmic head/body
+      //    PITCH rock (the bird tips as it scampers) — feet stay on the ground;
+      //  • lizard: a low, sinuous side-to-side body UNDULATION (spine wiggle), no
+      //    lift off the ground;
+      //  • jackrabbit: discrete BOUNDING hop arcs (rabbits really do leap), leaning
+      //    forward on launch and levelling at the apex.
+      let y = w.baseY;
+      let rot = 0;
+      let skewX = 0;
+      if (w.state === "walk") {
+        if (w.kind === "jackrabbit") {
+          const ph = time * Math.PI * w.hopSp + w.hopPhase;
+          y = w.baseY - Math.abs(Math.sin(ph)) * w.hop;
+          rot = -w.dir * 0.16 * Math.cos(ph); // lean into the leap, level at apex
+        } else if (w.kind === "roadrunner") {
+          // smooth ground travel + a gentle forward-tipping rock synced to stride
+          rot = -w.dir * 0.045 * (0.5 + 0.5 * Math.sin(time * w.gaitSp + w.gaitPhase));
+        } else {
+          // lizard: sinuous lateral undulation via a small horizontal skew; the
+          // body slinks side to side without ever leaving the ground.
+          skewX = 0.07 * Math.sin(time * w.gaitSp + w.gaitPhase);
+        }
+      } else if (w.kind !== "jackrabbit") {
+        // idle: a near-imperceptible breathing rock, no vertical hopping
+        rot = 0.015 * Math.sin(time * 1.3 + w.gaitPhase);
       }
-      bird.s.x = bird.x;
-      bird.s.y = bird.y0 + Math.sin(time * 1.6) * 10;
-      // gentle wing-flap via vertical squash
-      bird.s.scale.y = 0.32 * (0.9 + Math.abs(Math.sin(time * 7)) * 0.2);
+      w.s.x = w.x;
+      w.s.y = y;
+      // sprite mirrors on facing via scale.x; rotation/skew read correctly for both
+      // headings since the anchor sits at the base (feet) — so it pivots on the
+      // ground, never floating.
+      w.s.rotation = rot;
+      w.s.skew.x = skewX;
     }
 
-    // tumbleweed rolls + spins across the foreground, respawning
+    // bird flock: each glides one direction, bobs independently, never flips,
+    // respawns from the left after its own stagger.
+    {
+      const Hh = core.layout.H;
+      for (const b of flock) {
+        if (b.spawnDelay > 0) {
+          b.spawnDelay -= dt;
+          b.s.visible = false;
+          continue;
+        }
+        b.s.visible = true;
+        b.x += b.speed * dt;
+        if (b.x > b.span) {
+          // re-enter from the left at a fresh altitude/speed after a short stagger
+          b.x = b.startX - Math.random() * 160;
+          b.y0 = Hh * (0.13 + Math.random() * 0.2);
+          b.speed = 44 + Math.random() * 60;
+          b.spawnDelay = 0.5 + Math.random() * 3.5;
+        }
+        b.s.x = b.x;
+        b.s.y = b.y0 + Math.sin(time * b.bobSp + b.bobPh) * b.bobAmp;
+        // subtle wing-flap via vertical squash, around the bird's resting scale
+        b.s.scale.y = b.baseScale * (0.88 + Math.abs(Math.sin(time * b.flapSp + b.flapPh)) * 0.24);
+      }
+    }
+
+    // tumbleweed rolls ONE way across the foreground, respawning at random gaps
     if (tumble) {
-      tumble.x += tumble.speed * dt;
-      const span = core.layout.maxScroll + core.layout.W + 300;
-      if (tumble.x > span) {
-        tumble.x = -120;
-        tumble.y = core.layout.H - 30 - Math.random() * 30;
-        tumble.speed = 90 + Math.random() * 60;
+      if (tumble.delay > 0) {
+        tumble.delay -= dt;
+        tumble.s.visible = false;
+      } else {
+        tumble.s.visible = true;
+        tumble.x += tumble.speed * dt;
+        const span = core.layout.maxScroll + core.layout.W + 300;
+        if (tumble.x > span) {
+          tumble.x = -120;
+          tumble.y = core.layout.H - 30 - Math.random() * 30;
+          tumble.speed = 90 + Math.random() * 60;
+          tumble.delay = 2 + Math.random() * 9; // randomised respawn gap
+        }
+        tumble.s.x = tumble.x;
+        tumble.s.y = tumble.y + Math.abs(Math.sin(time * 4 + tumble.x * 0.01)) * 7;
+        tumble.s.rotation += tumble.spin * dt;
       }
-      tumble.s.x = tumble.x;
-      tumble.s.y = tumble.y + Math.sin(time * 6) * 6;
-      tumble.s.rotation += tumble.spin * dt;
     }
 
     // drifting dust
@@ -845,7 +1113,6 @@ export async function mountWorldPixi(
       pal = readPalette(root);
       drawSky();
       retint();
-      if (bird) bird.s.tint = mix(pal.ink, pal.skyTop, 0.25);
       if (tumble) tumble.s.tint = mix(pal.rock, pal.sand, 0.45);
       if (timeLbl) timeLbl.textContent = fmt(min);
       if (slider) slider.value = String(min);

@@ -376,6 +376,10 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
   color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; padding: 6px 2px;
 }
 .wander .customize__auto:hover { color: var(--panel-ink); }
+.wander .customize__colophon {
+  margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--panel-edge);
+  font-size: 11.5px; line-height: 1.5; letter-spacing: .01em; color: var(--ink-soft);
+}
 .wander .customize__done {
   background: var(--panel-edge); color: var(--panel); border: none; cursor: pointer;
   font: inherit; font-size: 14px; font-weight: 500; padding: 9px 22px; border-radius: 999px;
