@@ -396,12 +396,24 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 
 /* mobile */
 @media (max-width: 720px) {
-  .wander .wordmark { top: 18px; left: 18px; }
+  .wander .wordmark {
+    top: calc(16px + env(safe-area-inset-top));
+    left: calc(16px + env(safe-area-inset-left));
+    max-width: calc(100vw - 32px);
+  }
   .wander .wordmark .name { font-size: 18px; }
-  .wander .hint { width: 82px; height: 82px; right: 50%; transform: translateX(50%); top: auto; bottom: 96px; }
+  .wander .wordmark .tag { font-size: 9px; letter-spacing: .06em; white-space: normal; line-height: 1.3; }
+  .wander .hint {
+    width: 80px; height: 80px; right: 50%; top: auto;
+    transform: translateX(50%);
+    bottom: calc(114px + env(safe-area-inset-bottom));
+  }
   .wander .hint.hide { transform: translateX(50%) scale(.85); }
-  .wander .menu-btn { bottom: 20px; right: 18px; }
-  .wander .sheet { right: 18px; bottom: 80px; }
-  .wander .progress { bottom: 22px; }
+  .wander .menu-btn { bottom: calc(18px + env(safe-area-inset-bottom)); right: calc(16px + env(safe-area-inset-right)); }
+  .wander .sheet { right: calc(16px + env(safe-area-inset-right)); bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .wander .progress { bottom: calc(22px + env(safe-area-inset-bottom)); }
   .wander .panel { width: min(86vw, 360px); }
+  .wander .customize { padding: 18px; }
+  .wander .customize__card { padding: 22px 20px 18px; }
+  .wander .customize__time { font-size: 26px; }
 }
