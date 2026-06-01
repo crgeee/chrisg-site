@@ -92,13 +92,15 @@ function butteBlock(seed: number, w: number, h: number, x0: number, y0: number) 
   }
   const splitX = plCenter + plHalf * (0.1 + r() * 0.2);
   const shadow = `<path class="butte-sh" d="M ${f1(splitX)},${f1(topY)} L ${f1(plR)},${f1(topY - tiltD)} L ${f1(baseR)},${f1(cliffBot)} L ${f1(splitX)},${f1(cliffBot)} Z"/>`;
+  // lit facet — warm highlight down the sun-facing (left) side, for volume
+  const hi = `<path class="butte-hl" d="M ${f1(plL)},${f1(topY + tiltD)} L ${f1(splitX)},${f1(topY)} L ${f1(splitX)},${f1(cliffBot)} L ${f1(baseL)},${f1(cliffBot)} Z"/>`;
   let gully = "";
   const ng = 3 + Math.floor(r() * 3);
   for (let i = 0; i < ng; i++) {
     const gx = x0 + w * (0.2 + (i / ng) * 0.6 + (r() - 0.5) * 0.08);
     gully += `<path class="butte-gully" d="M ${f1(gx)},${f1(topY + h * 0.08)} q ${f1((r() - 0.5) * 8)},${f1(h * 0.3)} ${f1((r() - 0.5) * 6)},${f1((cliffBot - topY) * 0.92)}"/>`;
   }
-  return { sil, strata, shadow, gully, cliffBot, plL, plR, topY };
+  return { sil, strata, shadow, hi, gully, cliffBot, plL, plR, topY };
 }
 
 function butte(seed: number, w: number, h: number): string {
@@ -116,7 +118,7 @@ function butte(seed: number, w: number, h: number): string {
     const ub = butteBlock(seed * 3 + 1, uw, uh, ux, lower.topY - uh * 0.62);
     const uid = "cu" + (UID++);
     upper = `<path class="fill-butte" d="${ub.sil}"/>
-      <g clip-path="url(#${uid})">${ub.strata}${ub.shadow}${ub.gully}</g>`;
+      <g clip-path="url(#${uid})">${ub.strata}${ub.hi}${ub.shadow}${ub.gully}</g>`;
     upClip = `<clipPath id="${uid}"><path d="${ub.sil}"/></clipPath>`;
     upperOutline = `<path class="butte-outline" d="${ub.sil}"/>`;
   }
@@ -125,7 +127,7 @@ function butte(seed: number, w: number, h: number): string {
     ${talus}
     <defs><clipPath id="${id}"><path d="${lower.sil}"/></clipPath>${upClip}</defs>
     <path class="fill-butte" d="${lower.sil}"/>
-    <g clip-path="url(#${id})">${lower.strata}${lower.shadow}${lower.gully}</g>
+    <g clip-path="url(#${id})">${lower.strata}${lower.hi}${lower.shadow}${lower.gully}</g>
     <path class="butte-outline" d="${lower.sil}"/>
     ${upper}
     ${upperOutline}
@@ -190,7 +192,12 @@ function river(seed: number, w: number, y: number, width: number): string {
 
 // --- SUN ---
 function sun(rad: number): string {
-  return `<g class="sun"><circle class="sun-halo" cx="0" cy="0" r="${f1(rad * 1.7)}"/><circle class="fill-sun" cx="0" cy="0" r="${f1(rad)}"/></g>`;
+  return `<g class="sun">
+    <circle class="sun-halo sun-halo-2" cx="0" cy="0" r="${f1(rad * 2.5)}"/>
+    <circle class="sun-halo" cx="0" cy="0" r="${f1(rad * 1.65)}"/>
+    <circle class="fill-sun" cx="0" cy="0" r="${f1(rad)}"/>
+    <circle class="sun-core" cx="0" cy="0" r="${f1(rad * 0.66)}"/>
+  </g>`;
 }
 
 // --- CLOUDS ---
@@ -308,16 +315,55 @@ function speck(seed: number): string {
 // --- CREATURE (cloaked wanderer) ---
 function creature(seed: number): string {
   const r = makeRng(seed);
-  const w = 10 + r() * 3, h = 24 + r() * 6;
-  const d = `M 0,0
-    C ${f1(-w * 0.5)},${f1(-h * 0.2)} ${f1(-w * 0.62)},${f1(-h * 0.72)} 0,${f1(-h)}
-    C ${f1(w * 0.62)},${f1(-h * 0.72)} ${f1(w * 0.5)},${f1(-h * 0.2)} 0,0 Z`;
-  return `<g class="creature"><path class="fill-ink" d="${d}"/></g>`;
+  const w = 11 + r() * 3, h = 26 + r() * 7;
+  const hood = h * (0.2 + r() * 0.06);
+  // hooded cloak: narrow peaked top flaring to a wide hem
+  const body = `M ${f1(-w * 0.62)},0
+    C ${f1(-w * 0.72)},${f1(-h * 0.46)} ${f1(-w * 0.36)},${f1(-h * 0.78)} ${f1(-w * 0.16)},${f1(-h + hood)}
+    C ${f1(-w * 0.12)},${f1(-h - 2)} ${f1(w * 0.12)},${f1(-h - 2)} ${f1(w * 0.16)},${f1(-h + hood)}
+    C ${f1(w * 0.36)},${f1(-h * 0.78)} ${f1(w * 0.72)},${f1(-h * 0.46)} ${f1(w * 0.62)},0 Z`;
+  const staff = r() > 0.4 ? `<path class="creature-staff" d="M ${f1(w * 0.48)},${f1(-h * 0.08)} L ${f1(w * 0.74)},${f1(-h * 1.04)}"/>` : "";
+  const shadow = `<ellipse class="creature-sh" cx="0" cy="2.4" rx="${f1(w * 0.72)}" ry="2.4"/>`;
+  return `<g class="creature">${shadow}<path class="fill-ink" d="${body}"/>${staff}</g>`;
+}
+
+// --- TALL FLOWERING STALK ---
+function flowerStalk(seed: number): string {
+  const r = makeRng(seed);
+  const h = 26 + r() * 22;
+  const sway = (r() - 0.5) * 9;
+  const stem = `<path class="stem-green" d="M 0,0 q ${f1(sway * 0.6)},${f1(-h * 0.5)} ${f1(sway)},${f1(-h)}"/>`;
+  let buds = "";
+  const n = 3 + Math.floor(r() * 3);
+  for (let i = 0; i < n; i++) {
+    const t = 0.5 + (i / n) * 0.5;
+    const bx = sway * t, by = -h * t;
+    buds += `<circle class="fill-flower" cx="${f1(bx)}" cy="${f1(by)}" r="${f1(2 + r() * 1.6)}"/>`;
+  }
+  const leaves = `<path class="grass" d="M -2,0 q -6,-3 -9,-1 M 2,0 q 6,-3 9,-1"/>`;
+  return `<g class="flowerstalk">${leaves}${stem}${buds}</g>`;
+}
+
+// --- AGAVE / SUCCULENT ROSETTE ---
+function agave(seed: number): string {
+  const r = makeRng(seed);
+  const n = 7 + Math.floor(r() * 4);
+  let s = '<g class="agave">';
+  for (let i = 0; i < n; i++) {
+    const ang = -Math.PI * 0.5 + (i - (n - 1) / 2) * (Math.PI * 0.92 / n);
+    const len = 15 + r() * 14;
+    const tx = Math.cos(ang) * len, ty = Math.sin(ang) * len;
+    const wdt = 3 + r();
+    const nx = Math.cos(ang + Math.PI / 2) * wdt, ny = Math.sin(ang + Math.PI / 2) * wdt;
+    s += `<path class="agave-leaf" d="M ${f1(-nx)},${f1(-ny)} L ${f1(tx)},${f1(ty)} L ${f1(nx)},${f1(ny)} Z"/>`;
+  }
+  return s + "</g>";
 }
 
 export const Art = {
   makeRng, landMass, butte, rock, river, sun, cloud,
   pine, pineCluster, sage, cottonFlower, spiralFern, grassTuft, pebble, speck, creature,
+  flowerStalk, agave,
 };
 
 export type ArtKit = typeof Art;

@@ -20,7 +20,7 @@ export type SiteContent = {
 };
 
 export const SITE: SiteContent = {
-  name: "Chris Gonzalez",
+  name: "Christopher Gonzalez",
   tagline: "staff engineer · platform builder · san diego",
   intro: "Everything worth making starts as open country — quiet, unmarked, and yours to cross.",
   stations: [

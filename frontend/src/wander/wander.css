@@ -3,24 +3,26 @@
    `.wander` so it never leaks into the blog/admin pages. */
 
 .wander {
-  --stroke-w: 2.4;
+  --stroke-w: 2.3;
   --panel: #efe7d6;
   --panel-edge: #3a2a25;
   --panel-ink: #3a2a25;
+  --sun-core: #fff3cc;
+  --glow: #f6d59a;
 }
 
 /* ---- PALETTE MOODS ---- (default = sunset) */
 .wander,
 .wander[data-palette="sunset"] {
-  --sky-top:#bcd6e0; --sky-bot:#f4dadb;
-  --sun:#f6e3a4; --cloud:#f3cdd2;
-  --land-far:#d8bdba; --land-mid:#c6a09a; --hill:#bb928a;
-  --butte:#b58177; --bank:#d4c6a0; --sand:#e8ddc6; --sand-deep:#d8c8a6;
-  --river:#8fa1bd; --river-hi:#cdd7e4;
-  --rock:#7a564d; --pine:#6a5a4c; --sage:#9b9c7e;
-  --ink:#3a2a25; --ink-soft:#6f574e;
-  --plant:#5d7d5a; --tuft:#f7f4ed;
-  --panel:#efe7d6; --panel-edge:#3a2a25; --panel-ink:#3a2a25;
+  --sky-top:#a6c6d8; --sky-bot:#f8dccb;
+  --sun:#fae6a2; --sun-core:#fff5d2; --glow:#f8d79a; --cloud:#f3c9cd;
+  --land-far:#ddc1b9; --land-mid:#cd9f93; --hill:#c1897c;
+  --butte:#bd8071; --bank:#dac99e; --sand:#ecdabd; --sand-deep:#dcc69f;
+  --river:#8ea7c2; --river-hi:#d6e1ea;
+  --rock:#7e5448; --pine:#6b5a48; --sage:#9aa07b;
+  --ink:#362620; --ink-soft:#6d5347;
+  --plant:#5e7e56; --tuft:#f9f6ef;
+  --panel:#f1e9d7; --panel-edge:#362620; --panel-ink:#362620;
 }
 .wander[data-palette="twilight"] {
   --sky-top:#5d628f; --sky-bot:#c4a7c2;
@@ -75,8 +77,30 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 
 .wander #sky {
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bot) 52%, color-mix(in oklab, var(--sky-bot) 60%, var(--land-far)) 60%);
+  background: linear-gradient(to bottom,
+    var(--sky-top) 0%,
+    color-mix(in oklab, var(--sky-top) 55%, var(--sky-bot)) 34%,
+    var(--sky-bot) 50%,
+    color-mix(in oklab, var(--sky-bot) 78%, var(--glow)) 56%,
+    color-mix(in oklab, var(--sky-bot) 60%, var(--land-far)) 60%);
   transition: background .8s ease;
+}
+/* warm bloom around the sun */
+.wander #sunglow {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(40vw 40vw at 62% 50%,
+    color-mix(in oklab, var(--sun-core) 85%, transparent) 0%,
+    color-mix(in oklab, var(--glow) 50%, transparent) 26%,
+    transparent 60%);
+  mix-blend-mode: screen; opacity: .9;
+  transition: background .8s ease;
+}
+/* atmospheric haze band along the horizon */
+.wander #haze {
+  position: fixed; inset: 0; pointer-events: none; z-index: 38;
+  background: linear-gradient(to bottom, transparent 40%,
+    color-mix(in oklab, var(--glow) 42%, transparent) 52%, transparent 66%);
+  opacity: .55; mix-blend-mode: screen;
 }
 
 .wander .layer {
@@ -88,8 +112,11 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 .wander .depth-far { opacity: .96; }
 
 /* ---- art strokes / fills ---- */
+.wander .butte { filter: url(#wob); }
+.wander .rock { filter: url(#wob2); }
 .wander .butte-outline { fill: none; stroke: var(--ink); stroke-width: calc(var(--stroke-w) + 0.5); stroke-linejoin: round; stroke-linecap: round; }
 .wander .fill-butte { fill: var(--butte); stroke: none; }
+.wander .butte-hl { fill: #fff6e6; opacity: .15; stroke: none; }
 .wander .talus { fill: color-mix(in oklab, var(--butte) 60%, var(--bank)); stroke: none; }
 .wander .strata-d { fill: #2a1d18; opacity: .1; stroke: none; }
 .wander .strata-l { fill: #ffffff; opacity: .09; stroke: none; }
@@ -113,7 +140,9 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 
 /* sun + clouds */
 .wander .fill-sun { fill: var(--sun); stroke: none; }
+.wander .sun-core { fill: var(--sun-core); stroke: none; }
 .wander .sun-halo { fill: var(--sun); opacity: .2; stroke: none; }
+.wander .sun-halo-2 { opacity: .1; }
 .wander .fill-cloud { fill: var(--cloud); stroke: none; opacity: .92; }
 
 /* pines */
@@ -125,6 +154,10 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 .wander .sage-stem { fill: none; stroke: var(--ink-soft); stroke-width: 1; opacity: .4; stroke-linecap: round; }
 .wander .fill-tuft { fill: var(--tuft); stroke: var(--ink-soft); stroke-width: 1.2; }
 .wander .fill-ink { fill: var(--ink); stroke: none; }
+.wander .creature-staff { fill: none; stroke: var(--ink); stroke-width: 1.4; stroke-linecap: round; }
+.wander .creature-sh { fill: var(--ink); opacity: .14; stroke: none; }
+.wander .fill-flower { fill: color-mix(in oklab, var(--tuft) 55%, var(--cloud)); stroke: var(--ink-soft); stroke-width: .8; }
+.wander .agave-leaf { fill: var(--sage); stroke: var(--ink-soft); stroke-width: .8; opacity: .9; }
 .wander .stem, .wander .grass { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .wander .stem-green { fill: none; stroke: var(--plant); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .wander .speck { stroke: var(--ink-soft); stroke-width: 1.1; opacity: .4; stroke-linecap: round; }
@@ -144,14 +177,20 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 /* ---- content panels (parchment) ---- */
 .wander .panel {
   position: absolute;
-  width: min(78vw, 380px);
-  background: var(--panel);
+  width: min(78vw, 392px);
+  background: linear-gradient(157deg,
+    color-mix(in oklab, var(--panel) 90%, #fff) 0%,
+    var(--panel) 52%,
+    color-mix(in oklab, var(--panel) 88%, var(--panel-edge)) 100%);
   color: var(--panel-ink);
   border: 2.2px solid var(--panel-edge);
-  border-radius: 4px 7px 5px 8px;
-  padding: 22px 24px 24px;
-  box-shadow: 6px 9px 0 -2px color-mix(in oklab, var(--panel-edge) 22%, transparent),
-              0 18px 40px -18px rgba(0,0,0,.4);
+  border-radius: 4px 8px 5px 9px;
+  padding: 24px 26px 26px;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--panel-edge) 18%, transparent),
+    inset 0 1px 0 color-mix(in oklab, #fff 60%, transparent),
+    6px 9px 0 -2px color-mix(in oklab, var(--panel-edge) 20%, transparent),
+    0 24px 48px -20px rgba(42,24,14,.5);
   opacity: 0;
   transform: translateY(14px) rotate(-.5deg);
   transition: opacity .55s ease, transform .55s ease;
@@ -199,7 +238,7 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 }
 .wander #vignette {
   position: fixed; inset: 0; pointer-events: none; z-index: 39;
-  box-shadow: inset 0 0 220px -40px rgba(40,28,22,.34);
+  box-shadow: inset 0 0 240px -30px rgba(58,30,18,.42);
 }
 
 /* ---- UI chrome ---- */
@@ -216,20 +255,18 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 
 /* hint */
 .wander .hint {
-  position: fixed; z-index: 55; right: 7%; top: 56%;
-  width: 86px; height: 86px; border-radius: 50%;
-  border: 1.6px solid var(--ink); background: color-mix(in oklab, var(--panel) 70%, transparent);
+  position: fixed; z-index: 55; right: 7%; top: 54%;
+  width: 92px; height: 92px; border-radius: 50%;
+  border: 1.6px solid var(--ink); background: color-mix(in oklab, var(--panel) 72%, transparent);
   backdrop-filter: blur(1px);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; color: var(--ink); pointer-events: none;
+  gap: 5px; color: var(--ink); pointer-events: none; text-align: center;
   transition: opacity .6s ease, transform .6s ease;
-  animation: wanderFloaty 3.4s ease-in-out infinite;
 }
-.wander .hint .arrow { font-size: 19px; line-height: 1; }
-.wander .hint .arrow.r { transform: rotate(90deg); }
-.wander .hint .lbl { font-size: 12.5px; letter-spacing: .04em; }
+.wander .hint .arrow { font-size: 23px; line-height: 1; animation: wanderNudge 1.7s ease-in-out infinite; }
+.wander .hint .lbl { font-size: 11px; line-height: 1.18; letter-spacing: .03em; padding: 0 8px; }
 .wander .hint.hide { opacity: 0; transform: scale(.85); }
-@keyframes wanderFloaty { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-7px);} }
+@keyframes wanderNudge { 0%,100%{ transform: translateX(-5px);} 50%{ transform: translateX(5px);} }
 
 /* progress dots */
 .wander .progress {
@@ -283,15 +320,20 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 
 /* reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .wander .hint { animation: none; }
+  .wander .hint .arrow { animation: none; }
   .wander .panel { transition: opacity .2s ease; }
+}
+
+/* Drop the (expensive) hand-drawn edge filter on touch devices to keep dragging smooth. */
+@media (hover: none), (pointer: coarse) {
+  .wander .butte, .wander .rock { filter: none; }
 }
 
 /* mobile */
 @media (max-width: 720px) {
   .wander .wordmark { top: 18px; left: 18px; }
   .wander .wordmark .name { font-size: 18px; }
-  .wander .hint { width: 72px; height: 72px; right: 50%; transform: translateX(50%); top: auto; bottom: 92px; }
+  .wander .hint { width: 82px; height: 82px; right: 50%; transform: translateX(50%); top: auto; bottom: 96px; }
   .wander .hint.hide { transform: translateX(50%) scale(.85); }
   .wander .menu-btn { bottom: 20px; right: 18px; }
   .wander .sheet { right: 18px; bottom: 80px; }
