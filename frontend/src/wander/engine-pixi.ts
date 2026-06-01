@@ -233,6 +233,7 @@ export async function mountWorldPixi(
   let tumble: { s: Sprite; x: number; y: number; speed: number; spin: number; sc: number; delay: number } | null = null;
   let groundG: Graphics | null = null; // near sand band — re-tinted with the palette
   let nearDuneG: Graphics | null = null; // near-foreground dune lip (fastest parallax)
+  let groundDetail: { g: Graphics; kind: "rock" | "plant" | "darkrock" }[] = [];
 
   // ---- helpers -------------------------------------------------------------
   function addLayer(factor: number): Layer {
@@ -478,6 +479,14 @@ export async function mountWorldPixi(
     const inkTint = mix(pal.ink, pal.landMid, 0.12);
     if (groundG) groundG.tint = mix(pal.sand, pal.sandDeep, 0.4);
     if (nearDuneG) nearDuneG.tint = mix(pal.sandDeep, pal.rock, 0.22);
+    for (const gd of groundDetail) {
+      gd.g.tint =
+        gd.kind === "plant"
+          ? mix(pal.plant, pal.sage, 0.45)
+          : gd.kind === "darkrock"
+            ? mix(pal.rock, pal.ink, 0.25)
+            : mix(pal.rock, pal.sandDeep, 0.5);
+    }
     for (const t of tintables) {
       if (t.role === "formation") {
         const band = t.band ?? "mid";
@@ -543,6 +552,7 @@ export async function mountWorldPixi(
     tumble = null;
     groundG = null;
     nearDuneG = null;
+    groundDetail = [];
 
     const { W, H, HZ, stationStep, maxScroll, N } = core.layout;
     const localW = (factor: number) => Math.ceil(maxScroll * factor + W + 200);
@@ -745,6 +755,52 @@ export async function mountWorldPixi(
       groundG = g;
     }
 
+    // ---- GROUND DETAIL — scattered pebbles + stipple dashes + little green
+    // sprouts texture the bare sand and give a clear near→far read (denser and
+    // bigger toward the bottom). Two cheap Graphics (one rock-toned, one plant-
+    // toned), baked once and re-tinted with the palette. Sits behind the plants.
+    {
+      const L = addLayer(0.74);
+      const lw = localW(0.74);
+      const r = rnd(173);
+      const yTop = HZ + groundSpan * 0.46; // just below the formation bases
+      const band = H - yTop;
+      const peb = new Graphics();
+      const nPeb = Math.round(lw / 18);
+      for (let k = 0; k < nPeb; k++) {
+        const d = r(); // 0 = far/top, 1 = near/bottom
+        const x = r() * lw;
+        const y = yTop + Math.pow(d, 0.7) * band;
+        const sz = 1.2 + d * d * 5.5;
+        if (r() < 0.66) peb.ellipse(x, y, sz, sz * 0.62).fill({ color: 0xffffff });
+        else peb.rect(x, y, 0.8 + d * 1.6, 0.7 + d * 1.4).fill({ color: 0xffffff });
+      }
+      peb.alpha = 0.5;
+      peb.tint = mix(pal.rock, pal.sandDeep, 0.5);
+      L.c.addChild(peb);
+      groundDetail.push({ g: peb, kind: "rock" });
+
+      const spr = new Graphics();
+      const nSpr = Math.round(lw / 130);
+      for (let k = 0; k < nSpr; k++) {
+        const d = 0.35 + r() * 0.65;
+        const x = r() * lw;
+        const y = yTop + d * band;
+        const hh = 3 + d * 9;
+        for (let b = -1; b <= 1; b++) {
+          const ang = Math.PI / 2 + b * 0.5 + (r() - 0.5) * 0.25;
+          spr
+            .moveTo(x, y)
+            .lineTo(x + Math.cos(ang) * hh * 0.5, y - Math.sin(ang) * hh)
+            .stroke({ color: 0xffffff, width: 0.9 + d });
+        }
+      }
+      spr.alpha = 0.66;
+      spr.tint = mix(pal.plant, pal.sage, 0.45);
+      L.c.addChild(spr);
+      groundDetail.push({ g: spr, kind: "plant" });
+    }
+
     // ---- PLANTS (saguaro / agave / cottongrass) — sway about base ----
     {
       const L = addLayer(0.84);
@@ -771,6 +827,30 @@ export async function mountWorldPixi(
           gust: 0.11 + r() * 0.17,
         });
       }
+    }
+
+    // ---- FOREGROUND ROCKS — a few larger, darker rocks low in the frame that
+    // parallax fast, anchoring the near plane (the bottom-corner rocks in the
+    // reference). Soft rounded blobs, one Graphics, re-tinted with the palette.
+    {
+      const L = addLayer(1.05);
+      const lw = localW(1.05);
+      const r = rnd(181);
+      const g = new Graphics();
+      const nRock = Math.max(4, Math.round(lw / 460));
+      for (let k = 0; k < nRock; k++) {
+        const x = lw * ((k + 0.15 + r() * 0.7) / nRock);
+        const y = H - 2 - r() * groundSpan * 0.07;
+        const w = 26 + r() * 48;
+        const h = w * (0.42 + r() * 0.3);
+        g.ellipse(x, y - h * 0.5, w * 0.5, h * 0.5).fill({ color: 0xffffff });
+        g.ellipse(x - w * 0.22, y - h * 0.32, w * 0.32, h * 0.34).fill({ color: 0xffffff });
+        g.ellipse(x + w * 0.24, y - h * 0.3, w * 0.3, h * 0.32).fill({ color: 0xffffff });
+      }
+      g.alpha = 0.92;
+      g.tint = mix(pal.rock, pal.ink, 0.25);
+      L.c.addChild(g);
+      groundDetail.push({ g, kind: "darkrock" });
     }
 
     // ---- NEAR-FOREGROUND LIP — a low dune edge + a couple of close, larger,
