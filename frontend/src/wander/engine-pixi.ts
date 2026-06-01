@@ -35,6 +35,8 @@ import {
   Sprite,
   Texture,
   FillGradient,
+  ParticleContainer,
+  Particle,
 } from "pixi.js";
 import type { SiteContent } from "./content";
 import type { ArtKit } from "./art";
@@ -128,7 +130,7 @@ type Swayer = { s: Sprite; amp: number; sp: number; ph: number; gust: number };
 // Floating ambient mote: rises slowly, drifts sideways, fades in/out, loops.
 // (The gentle makemepulse-style sky particles — they replace the birds.)
 type Dust = {
-  g: Graphics;
+  p: Particle;
   x: number; // base x (drift oscillates around it)
   y: number;
   rise: number; // upward speed (px/s)
@@ -217,6 +219,7 @@ export async function mountWorldPixi(
   let clouds: { s: Sprite; x: number; y: number; speed: number; baseAlpha: number }[] = [];
   let cloudTex: Texture | null = null;
   let cloudSpan = 0;
+  let moteTex: Texture | null = null;
   let tumble: { s: Sprite; x: number; y: number; speed: number; spin: number; sc: number; delay: number } | null = null;
   let groundG: Graphics | null = null; // near sand band — re-tinted with the palette
   let nearDuneG: Graphics | null = null; // near-foreground dune lip (fastest parallax)
@@ -251,6 +254,7 @@ export async function mountWorldPixi(
     s.x = x;
     s.y = baseY;
     if (opts.alpha != null) s.alpha = opts.alpha;
+    s.cullable = true; // skip drawing the many off-screen formations of the wide world
     L.c.addChild(s);
     tintables.push({ s, role: "formation", haze, jitter, band: opts.band ?? "mid" });
     return s;
@@ -274,6 +278,7 @@ export async function mountWorldPixi(
     s.x = x;
     s.y = baseY;
     if (opts.alpha != null) s.alpha = opts.alpha;
+    s.cullable = true; // off-screen plants/critters across the world aren't drawn
     L.c.addChild(s);
     tintables.push({ s, role, haze: 0, jitter: 0 });
     return s;
@@ -332,6 +337,18 @@ export async function mountWorldPixi(
   // A soft, flat-bottomed puffy cloud silhouette (overlapping lobes), generated
   // once in white so every cloud can be tinted to the palette's cloud colour
   // (pale by day, pink at sunset, dusk-violet at night).
+  // A soft round dot, generated once and shared by every floating mote so the
+  // whole field is one ParticleContainer (a single draw call) instead of dozens
+  // of separate Graphics.
+  function makeMoteTexture(): Texture {
+    const g = new Graphics();
+    g.circle(16, 16, 13).fill({ color: 0xffffff, alpha: 0.22 });
+    g.circle(16, 16, 6).fill({ color: 0xffffff, alpha: 1 });
+    const tex = app.renderer.generateTexture(g);
+    g.destroy();
+    return tex;
+  }
+
   function makeCloudTexture(): Texture {
     const g = new Graphics();
     const lobes: [number, number, number][] = [
@@ -499,7 +516,7 @@ export async function mountWorldPixi(
     }
     // floating motes take a soft, pale tuft/glow colour
     for (const d of dust) {
-      d.g.tint = mix(pal.tuft, pal.glow, 0.3);
+      d.p.tint = mix(pal.tuft, pal.glow, 0.3);
     }
     // clouds take the palette's cloud colour, warmed slightly toward the glow
     for (const c of clouds) {
@@ -993,19 +1010,28 @@ export async function mountWorldPixi(
       dustSpan = lw;
       const r = rnd(109);
       const count = Math.min(coarse ? 34 : 64, Math.round(lw / 80));
+      if (!moteTex) moteTex = makeMoteTexture();
+      const pc = new ParticleContainer({ dynamicProperties: { position: true, color: true } });
+      L.c.addChild(pc);
+      const moteColor = mix(pal.tuft, pal.glow, 0.3);
       for (let i = 0; i < count; i++) {
         const x = lw * (i / count) + (r() - 0.5) * 80;
         const y = r() * H;
-        const rad = 1 + r() * 2.4;
-        const g = new Graphics();
-        g.circle(0, 0, rad * 2.1).fill({ color: 0xffffff, alpha: 0.22 });
-        g.circle(0, 0, rad).fill({ color: 0xffffff, alpha: 1 });
-        g.x = x;
-        g.y = y;
-        g.tint = mix(pal.tuft, pal.glow, 0.3);
-        L.c.addChild(g);
+        const sc = (2 + r() * 5) / 13; // mote texture core ~13px → ~4–14px on screen
+        const p = new Particle({
+          texture: moteTex,
+          x,
+          y,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          scaleX: sc,
+          scaleY: sc,
+          tint: moteColor,
+          alpha: 0,
+        });
+        pc.addParticle(p);
         dust.push({
-          g,
+          p,
           x,
           y,
           rise: 5 + r() * 12,
@@ -1092,9 +1118,9 @@ export async function mountWorldPixi(
         d.y = core.layout.H + 12;
         d.x = Math.random() * dustSpan;
       }
-      d.g.x = d.x + Math.sin(time * d.sp + d.ph) * d.drift;
-      d.g.y = d.y;
-      d.g.alpha = d.maxA * (0.5 + 0.5 * Math.sin(time * d.fadeSp + d.fadePh));
+      d.p.x = d.x + Math.sin(time * d.sp + d.ph) * d.drift;
+      d.p.y = d.y;
+      d.p.alpha = d.maxA * (0.5 + 0.5 * Math.sin(time * d.fadeSp + d.fadePh));
     }
 
     // clouds drift slowly across the upper sky, wrapping within their layer
