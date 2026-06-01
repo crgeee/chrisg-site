@@ -164,11 +164,17 @@ export async function mountWorldPixi(
 
   // ---- preload the illustrated assets --------------------------------------
   const textures: Record<AssetKey, Texture> = {} as Record<AssetKey, Texture>;
-  await Promise.all(
-    ALL_KEYS.map(async (k) => {
+  let birdFrames: Texture[] = []; // 2-frame stop-motion flap (wings up / down)
+  await Promise.all([
+    ...ALL_KEYS.map(async (k) => {
       textures[k] = await Assets.load(`${BASE}${k}.webp`);
     }),
-  );
+    (async () => {
+      birdFrames = (await Promise.all(
+        ["bird1", "bird2"].map((n) => Assets.load(`${BASE}${n}.webp`)),
+      )) as Texture[];
+    })(),
+  ]);
 
   // ---- Pixi application (transparent, full-screen) -------------------------
   const app = new Application();
@@ -904,11 +910,18 @@ export async function mountWorldPixi(
       for (let i = 0; i < n; i++) {
         // depth 0 = nearer/bigger/faster/lower, 1 = farther/smaller/slower/higher
         const depth = (i + r() * 0.6) / n;
-        const baseScale = 0.08 * (0.55 + (1 - depth) * 0.55); // small birds; smaller still when far
-        const s = placeByWidth(L, "bird", 0, 0, textures.bird.width * baseScale, "ink", {});
+        // birds are a 2-frame stop-motion flap (wings up / wings down): build
+        // the sprite straight from the frame textures and size it to a target
+        // on-screen WIDTH (nearer = bigger). Both frames share dimensions, so the
+        // footprint stays constant as the texture swaps each beat.
+        const tex0 = birdFrames[0] ?? textures.bird;
+        const targetW = 22 + (1 - depth) * 22; // px
+        const baseScale = targetW / tex0.width;
+        const s = new Sprite(tex0);
         s.anchor.set(0.5, 0.5);
-        s.tint = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, depth * 0.45);
         s.scale.set(baseScale);
+        s.tint = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, depth * 0.45);
+        L.c.addChild(s);
         const startX = -120 - r() * 220;
         flock.push({
           s,
@@ -921,7 +934,7 @@ export async function mountWorldPixi(
           bobAmp: 6 + (1 - depth) * 10,
           bobSp: 0.9 + r() * 0.9,
           bobPh: r() * 6.28,
-          flapSp: 9 + r() * 4,
+          flapSp: 6 + r() * 3,
           flapPh: r() * 6.28,
           spawnDelay: i * (1.6 + r() * 2.4),
           startX,
@@ -1030,10 +1043,11 @@ export async function mountWorldPixi(
         }
         b.s.x = b.x;
         b.s.y = b.y0 + Math.sin(time * b.bobSp + b.bobPh) * b.bobAmp;
-        // VISIBLE wing-flap: the silhouette's height swings from wings-level
-        // (short) to wings-up (tall) on each beat — a clear flap, not a twitch.
-        const flap = Math.abs(Math.sin(time * b.flapSp + b.flapPh));
-        b.s.scale.y = b.baseScale * (0.58 + flap * 0.62);
+        // STOP-MOTION wing-flap: swap between the wings-up / wings-down frames.
+        if (birdFrames.length) {
+          const fi = Math.floor(time * b.flapSp + b.flapPh) % birdFrames.length;
+          b.s.texture = birdFrames[fi];
+        }
       }
     }
 
