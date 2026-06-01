@@ -4,6 +4,7 @@
 // illustrated-mode only, scoped to a root element, with full teardown.
 import type { ArtKit } from "./art";
 import type { SiteContent } from "./content";
+import { paletteAt, applyPalette, localHourNow } from "./palette";
 
 export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () => void {
   const stage = root.querySelector("#stage") as HTMLElement;
@@ -458,8 +459,11 @@ export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () 
       `<button data-i="${i}" aria-current="${i === 0}"><span class="pl">${st.label}</span></button>`).join("");
     prog.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => goTo(+(b as HTMLElement).dataset.i!)));
     const sheet = root.querySelector(".sheet")!;
-    sheet.innerHTML = '<div class="shead">Travel to</div>' + SITE.stations.map((st, i) =>
-      `<button class="dest" data-i="${i}"><span>${st.label}</span><span class="n">${String(i + 1).padStart(2, "0")}</span></button>`).join("");
+    sheet.innerHTML = '<div class="shead">Travel to</div>'
+      + SITE.stations.map((st, i) =>
+        `<button class="dest" data-i="${i}"><span>${st.label}</span><span class="n">${String(i + 1).padStart(2, "0")}</span></button>`).join("")
+      + '<div class="sheet-sep"></div>'
+      + '<button class="sheet-customize"><span>Customize</span><span class="n">☼</span></button>';
     sheet.querySelectorAll(".dest").forEach((b) => b.addEventListener("click", () => { goTo(+(b as HTMLElement).dataset.i!); toggleSheet(false); }));
     const mb = root.querySelector(".menu-btn") as HTMLElement;
     mb.addEventListener("click", (e) => { e.stopPropagation(); toggleSheet(); });
@@ -485,9 +489,40 @@ export function mountWorld(root: HTMLElement, SITE: SiteContent, A: ArtKit): () 
     rt = setTimeout(() => { const ratio = maxScroll ? scroll / maxScroll : 0; buildIllustrated(); scroll = ratio * maxScroll; }, 180);
   };
 
+  // Time-of-day palette + the Customize screen that controls it.
+  function setupCustomize() {
+    const overlay = root.querySelector(".customize") as HTMLElement | null;
+    const slider = root.querySelector(".customize__slider") as HTMLInputElement | null;
+    const timeLbl = root.querySelector(".customize__time");
+    const fmt = (min: number) => {
+      const h24 = Math.floor(min / 60), m = min % 60;
+      const ap = h24 < 12 ? "AM" : "PM";
+      let hh = h24 % 12; if (hh === 0) hh = 12;
+      return `${hh}:${String(m).padStart(2, "0")} ${ap}`;
+    };
+    const store = (val: string | null) => { try { if (val == null) localStorage.removeItem("wander-tod"); else localStorage.setItem("wander-tod", val); } catch { /* ignore */ } };
+    const read = () => { try { return localStorage.getItem("wander-tod"); } catch { return null; } };
+    const setTime = (min: number, manual: boolean) => {
+      applyPalette(root, paletteAt(min / 60));
+      if (timeLbl) timeLbl.textContent = fmt(min);
+      if (slider) slider.value = String(min);
+      if (manual) store(String(min));
+    };
+    const stored = read();
+    setTime(stored != null ? parseInt(stored, 10) : Math.round(localHourNow() * 60), false);
+    const open = () => { if (overlay) overlay.classList.add("open"); };
+    const close = () => { if (overlay) overlay.classList.remove("open"); };
+    if (slider) slider.addEventListener("input", () => setTime(parseInt(slider.value, 10), true));
+    (root.querySelector(".customize__done") as HTMLElement | null)?.addEventListener("click", close);
+    (root.querySelector(".customize__close") as HTMLElement | null)?.addEventListener("click", close);
+    (root.querySelector(".customize__auto") as HTMLElement | null)?.addEventListener("click", () => { store(null); setTime(Math.round(localHourNow() * 60), false); });
+    (root.querySelector(".sheet-customize") as HTMLElement | null)?.addEventListener("click", () => { open(); toggleSheet(false); });
+  }
+
   // init
   makeGrain();
   buildUI();
+  setupCustomize();
   buildIllustrated();
   stage.addEventListener("mousedown", down);
   window.addEventListener("mousemove", move);

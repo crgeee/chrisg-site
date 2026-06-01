@@ -63,6 +63,32 @@ export default function WanderWorld() {
 
       <button className="ui menu-btn" aria-label="Open travel menu">···</button>
       <div className="sheet" role="menu" />
+
+      {/* Customize: set the time of day (= the colors) */}
+      <div className="customize" role="dialog" aria-label="Set the time of day">
+        <div className="customize__card">
+          <button className="customize__close" aria-label="Close">×</button>
+          <p className="customize__eyebrow">Customize</p>
+          <h2 className="customize__title">Time of day</h2>
+          <p className="customize__time">—</p>
+          <input
+            className="customize__slider"
+            type="range"
+            min="0"
+            max="1439"
+            step="1"
+            defaultValue="720"
+            aria-label="Time of day"
+          />
+          <div className="customize__marks">
+            <span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span>
+          </div>
+          <div className="customize__actions">
+            <button className="customize__auto">Use my local time</button>
+            <button className="customize__done">Done</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

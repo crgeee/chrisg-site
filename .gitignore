@@ -27,3 +27,6 @@ backend/static/
 
 # Playwright MCP
 .playwright-mcp/
+
+# Claude Code agent worktrees (transient)
+.claude/worktrees/
