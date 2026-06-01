@@ -139,9 +139,16 @@ export function createWorldCore(root: HTMLElement, SITE: SiteContent): WorldCore
       // run off-screen. 900px is the threshold where a side panel + open space fit.
       const wide = W >= 900;
       const onRight = wide && i % 2 === 1;
+      // The rendered panel width mirrors the CSS: mobile (<=720px) caps at
+      // min(86vw, 360px), otherwise min(78vw, 392px). Once the px cap kicks in,
+      // a flat % margin no longer centres it — compute the EVEN margin from the
+      // actual width. Only shift left/right when the screen is wide enough.
+      const panelW = W <= 720 ? Math.min(0.86 * W, 360) : Math.min(0.78 * W, 392);
       const left = onRight
         ? Si * panelFactor + W * 0.52
-        : Si * panelFactor + (wide ? W * 0.06 : W * 0.07);
+        : wide
+          ? Si * panelFactor + W * 0.06
+          : Si * panelFactor + (W - panelW) / 2;
       const top = H * (0.19 + (i % 2) * (wide ? 0.05 : 0.03));
       const isIntro = i === 0;
       let links = "";
