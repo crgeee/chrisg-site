@@ -55,7 +55,7 @@ export default function WanderWorld() {
       </header>
 
       <div className="hint" aria-hidden="true">
-        <span className="arrow">↔</span>
+        <span className="arrow">→</span>
         <span className="lbl">Drag to explore</span>
       </div>
 

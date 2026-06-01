@@ -132,8 +132,12 @@ export function createWorldCore(root: HTMLElement, SITE: SiteContent): WorldCore
     let html = "";
     SITE.stations.forEach((st, i) => {
       const Si = i * stationStep;
-      const left = Si * panelFactor + W * 0.07;
-      const top = H * (0.2 + (i % 2) * 0.06);
+      // Alternate the panel side through the stations: even = left, odd = right.
+      // (The hero formation is placed on the opposite side so each screen reads
+      // as a balanced composition rather than always panel-left.)
+      const onRight = i % 2 === 1;
+      const left = Si * panelFactor + (onRight ? W * 0.56 : W * 0.06);
+      const top = H * (0.19 + (i % 2) * 0.05);
       const isIntro = i === 0;
       let links = "";
       if (st.links && st.links.length) {
@@ -243,21 +247,37 @@ export function createWorldCore(root: HTMLElement, SITE: SiteContent): WorldCore
             (st, i) =>
               `<button class="dest" data-i="${i}"><span>${st.label}</span><span class="n">${String(i + 1).padStart(2, "0")}</span></button>`,
           )
-          .join("");
+          .join("") +
+        '<button class="dest sheet-customize"><span>Customize</span><span class="n">time of day</span></button>';
       sheet.querySelectorAll(".dest").forEach((b) =>
         b.addEventListener("click", () => {
+          // the Customize entry opens the time-of-day dialog (wired by the
+          // engine's setupCustomize via the `.sheet-customize` class), not a
+          // station jump — so skip the goTo here.
+          if (b.classList.contains("sheet-customize")) return;
           goTo(+(b as HTMLElement).dataset.i!);
           toggleSheet(false);
         }),
       );
     }
     if (mb && sheet) {
-      mb.addEventListener("click", (e) => {
+      // The menu button is a persistent scaffold element (it is NOT regenerated
+      // like the progress dots / sheet innerHTML), so a remount — e.g. React
+      // StrictMode's deliberate double-invoke in dev — would stack a SECOND
+      // click listener on the same button. Two listeners → two toggleSheet()
+      // calls per click → the sheet opens and instantly closes (a dead menu).
+      // Replace the button with a clean clone so exactly one listener is ever
+      // attached, and drop the previous mount's document handler before adding
+      // ours so those don't accumulate either.
+      const freshMb = mb.cloneNode(true) as HTMLElement;
+      mb.replaceWith(freshMb);
+      freshMb.addEventListener("click", (e) => {
         e.stopPropagation();
         toggleSheet();
       });
+      document.removeEventListener("click", docClick);
       docClick = (e: MouseEvent) => {
-        if (!sheet.contains(e.target as Node) && e.target !== mb) toggleSheet(false);
+        if (!sheet.contains(e.target as Node) && e.target !== freshMb) toggleSheet(false);
       };
       document.addEventListener("click", docClick);
     }

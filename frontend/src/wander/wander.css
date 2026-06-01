@@ -266,7 +266,7 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 .wander .hint .arrow { font-size: 23px; line-height: 1; animation: wanderNudge 1.7s ease-in-out infinite; }
 .wander .hint .lbl { font-size: 11px; line-height: 1.18; letter-spacing: .03em; padding: 0 8px; }
 .wander .hint.hide { opacity: 0; transform: scale(.85); }
-@keyframes wanderNudge { 0%,100%{ transform: translateX(-5px);} 50%{ transform: translateX(5px);} }
+@keyframes wanderNudge { 0%,100%{ transform: translateX(0);} 50%{ transform: translateX(9px);} 70%{ transform: translateX(4px);} }
 
 /* progress dots */
 .wander .progress {

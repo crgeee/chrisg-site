@@ -32,15 +32,24 @@ export default function PixiWanderWorld() {
     let destroy: (() => void) | null = null;
     let cancelled = false;
 
-    if (root) {
+    // The Pixi engine mounts imperatively and destructively rebuilds #world.
+    // React StrictMode (dev) deliberately mounts → unmounts → remounts, which
+    // would race TWO async engine instances over the same DOM (the live ticker
+    // could end up pointing at a holder the other instance already wiped, so
+    // the content panels stop tracking the scroll). Defer the heavy mount one
+    // frame: StrictMode's synchronous cleanup cancels this first invocation
+    // before it ever touches the DOM, so exactly one engine is built.
+    const raf = requestAnimationFrame(() => {
+      if (cancelled || !root) return;
       mountWorldPixi(root, SITE, Art).then((d) => {
         if (cancelled) d();
         else destroy = d;
       });
-    }
+    });
 
     return () => {
       cancelled = true;
+      cancelAnimationFrame(raf);
       if (destroy) destroy();
       document.body.classList.remove("wander-lock");
     };
@@ -79,7 +88,7 @@ export default function PixiWanderWorld() {
       </header>
 
       <div className="hint" aria-hidden="true">
-        <span className="arrow">↔</span>
+        <span className="arrow">→</span>
         <span className="lbl">Drag to explore</span>
       </div>
 
