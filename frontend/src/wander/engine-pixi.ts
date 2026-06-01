@@ -347,12 +347,17 @@ export async function mountWorldPixi(
   function makeCloudTexture(): Texture {
     const g = new Graphics();
     const lobes: [number, number, number][] = [
-      [70, 78, 40], [120, 60, 52], [180, 70, 46], [228, 80, 34],
-      [100, 86, 44], [160, 88, 46], [210, 90, 38],
+      [78, 80, 40], [128, 58, 56], [188, 70, 50], [238, 84, 36],
+      [104, 88, 48], [168, 90, 50], [216, 94, 40],
     ];
-    for (const [x, y, r] of lobes) g.circle(x, y, r * 1.22).fill({ color: 0xffffff, alpha: 0.18 });
+    // soft outer haze
+    for (const [x, y, r] of lobes) g.circle(x, y, r * 1.25).fill({ color: 0xffffff, alpha: 0.13 });
+    // shaded underside (slightly grey, sat low) — gives the cloud volume once tinted
+    for (const [x, y, r] of lobes) g.circle(x, y + r * 0.42, r * 0.92).fill({ color: 0xdfdbe6, alpha: 1 });
+    g.rect(64, 96, 188, 22).fill({ color: 0xdfdbe6, alpha: 1 });
+    // bright body + a brighter top highlight
     for (const [x, y, r] of lobes) g.circle(x, y, r).fill({ color: 0xffffff, alpha: 1 });
-    g.rect(60, 86, 180, 26).fill({ color: 0xffffff, alpha: 1 }); // flatten the base
+    for (const [x, y, r] of lobes) g.circle(x - r * 0.16, y - r * 0.24, r * 0.58).fill({ color: 0xffffff, alpha: 1 });
     const tex = app.renderer.generateTexture(g);
     g.destroy();
     return tex;
@@ -403,27 +408,30 @@ export async function mountWorldPixi(
     const sp = sunPos(hour, W, H);
     const mp = moonPos(hour, W, H);
 
-    // Sunset / sunrise bloom: a warm wash that swells along the horizon beneath
-    // the sun and intensifies the LOWER the sun sits — the "cool sunset" glow.
-    if (sp.up) {
-      const low = Math.max(0, Math.min(1, (sp.y / H - 0.42) / 0.44));
-      if (low > 0.04) {
-        const gw = W * (0.42 + low * 0.5);
-        const gh = H * (0.12 + low * 0.1);
-        skyG.ellipse(sp.x, HZ, gw, gh).fill({ color: mix(pal.glow, pal.sun, 0.45), alpha: 0.32 * low });
-        skyG.ellipse(sp.x, HZ, gw * 0.56, gh * 0.7).fill({ color: pal.sun, alpha: 0.26 * low });
-      }
+    // How low the sun sits (0 = noon, 1 = on the horizon). Drives BOTH the sunset
+    // bloom and the sun's own size/warmth — it swells and goldens as it sets.
+    const sunLow = sp.up ? Math.max(0, Math.min(1, (sp.y / H - 0.42) / 0.44)) : 0;
+
+    // Sunset / sunrise bloom: a warm wash swelling along the horizon under the sun.
+    if (sp.up && sunLow > 0.04) {
+      const gw = W * (0.42 + sunLow * 0.5);
+      const gh = H * (0.12 + sunLow * 0.1);
+      skyG.ellipse(sp.x, HZ, gw, gh).fill({ color: mix(pal.glow, pal.sun, 0.45), alpha: 0.32 * sunLow });
+      skyG.ellipse(sp.x, HZ, gw * 0.56, gh * 0.7).fill({ color: pal.sun, alpha: 0.26 * sunLow });
     }
 
     sunG.clear();
     if (sp.up) {
-      // A big, soft, pale sun like the reference — wide diffuse halo, gentle core.
-      const R = Math.round(H * 0.085);
-      sunG.circle(0, 0, R * 2.6).fill({ color: pal.sun, alpha: 0.08 });
-      sunG.circle(0, 0, R * 1.7).fill({ color: pal.sun, alpha: 0.14 });
-      sunG.circle(0, 0, R * 1.15).fill({ color: pal.sun, alpha: 0.5 });
-      sunG.circle(0, 0, R).fill({ color: mix(pal.sun, pal.sunCore, 0.6) });
-      sunG.circle(0, 0, R * 0.82).fill({ color: pal.sunCore });
+      // A warm, luminous disc that swells + goldens toward sunset. Layered glow
+      // rings give a soft radiance; a crisp warm core reads as the sun itself.
+      const R = Math.round(H * 0.072 * (1 + sunLow * 0.42));
+      const warm = mix(pal.sun, pal.glow, 0.4 * sunLow); // golden as it sets
+      sunG.circle(0, 0, R * 3.4).fill({ color: pal.glow, alpha: 0.06 + sunLow * 0.06 });
+      sunG.circle(0, 0, R * 2.3).fill({ color: pal.sun, alpha: 0.12 });
+      sunG.circle(0, 0, R * 1.5).fill({ color: pal.sun, alpha: 0.3 });
+      sunG.circle(0, 0, R * 1.12).fill({ color: mix(warm, pal.sunCore, 0.4), alpha: 0.9 });
+      sunG.circle(0, 0, R).fill({ color: warm });
+      sunG.circle(0, 0, R * 0.74).fill({ color: pal.sunCore });
       sunG.x = sp.x;
       sunG.y = sp.y;
       sunG.visible = true;
@@ -433,13 +441,17 @@ export async function mountWorldPixi(
 
     moonG.clear();
     if (mp.up && night) {
-      const R = Math.round(H * 0.042);
-      // A simple, soft FULL moon — a pale disc with a gentle halo. (No crescent
-      // cut-out: overlaying a sky-coloured disc read as a harsh two-tone
-      // eclipse rather than a moon.)
-      moonG.circle(0, 0, R * 2.6).fill({ color: pal.sunCore, alpha: 0.1 });
-      moonG.circle(0, 0, R * 1.5).fill({ color: pal.tuft, alpha: 0.22 });
-      moonG.circle(0, 0, R).fill({ color: mix(pal.tuft, pal.sunCore, 0.25) });
+      const R = Math.round(H * 0.044);
+      // A luminous full moon: a soft halo, a pale disc with a gentle upper glow,
+      // and a few very faint maria for a touch of surface dimension (no crescent).
+      moonG.circle(0, 0, R * 3).fill({ color: pal.tuft, alpha: 0.07 });
+      moonG.circle(0, 0, R * 1.9).fill({ color: pal.tuft, alpha: 0.14 });
+      moonG.circle(0, 0, R * 1.28).fill({ color: pal.tuft, alpha: 0.3 });
+      moonG.circle(0, 0, R).fill({ color: mix(pal.tuft, pal.sunCore, 0.18) });
+      moonG.circle(0, -R * 0.12, R * 0.85).fill({ color: pal.tuft, alpha: 0.5 }); // soft upper glow
+      moonG.circle(-R * 0.3, -R * 0.22, R * 0.2).fill({ color: mix(pal.tuft, pal.glow, 0.4), alpha: 0.16 });
+      moonG.circle(R * 0.24, R * 0.16, R * 0.15).fill({ color: mix(pal.tuft, pal.glow, 0.4), alpha: 0.13 });
+      moonG.circle(R * 0.05, -R * 0.34, R * 0.1).fill({ color: mix(pal.tuft, pal.glow, 0.4), alpha: 0.12 });
       moonG.x = mp.x;
       moonG.y = mp.y;
       moonG.visible = true;
@@ -553,14 +565,16 @@ export async function mountWorldPixi(
       const lw = localW(0.08);
       cloudSpan = lw;
       const r = rnd(151);
-      const n = Math.max(5, Math.round(lw / (W * 0.55)));
-      const top = H * 0.05;
+      const n = Math.max(7, Math.round(lw / (W * 0.42)));
+      const top = H * 0.04;
       const bandH = Math.max(H * 0.18, HZ - H * 0.16);
       for (let i = 0; i < n; i++) {
-        const sc = 0.55 + r() * 1.15;
-        const x = (lw * (i + r() * 0.6)) / n;
-        const y = top + r() * bandH;
-        const baseAlpha = 0.42 + r() * 0.4;
+        // depth: smaller + higher + fainter clouds read as further away
+        const d = r();
+        const sc = 0.42 + (1 - d) * 1.25;
+        const x = (lw * (i + r() * 0.7)) / n;
+        const y = top + d * bandH;
+        const baseAlpha = 0.34 + (1 - d) * 0.42;
         const s = new Sprite(cloudTex);
         s.anchor.set(0.5, 0.5);
         s.scale.set(sc, sc * 0.82);
