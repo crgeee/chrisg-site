@@ -57,7 +57,7 @@ const FORMATIONS = [
 ] as const;
 const RANGE = "range" as const;
 const PLANTS = ["saguaro", "agave", "cottongrass"] as const;
-const CRITTERS = ["jackrabbit", "roadrunner", "lizard", "bird", "tumbleweed"] as const;
+const CRITTERS = ["jackrabbit", "roadrunner", "lizard", "tumbleweed"] as const;
 type FormationKey = (typeof FORMATIONS)[number];
 type AssetKey =
   | FormationKey
@@ -128,11 +128,12 @@ type Swayer = { s: Sprite; amp: number; sp: number; ph: number; gust: number };
 // A small gliding bird in the loose flock — one direction, gentle altitude bob,
 // staggered respawn. Depth controls size/speed/tint so the flock reads layered.
 type FlockBird = {
-  s: Sprite;
+  g: Graphics; // procedurally drawn each frame (so the flap never flips facing)
+  u: number; // size unit (px)
+  color: number; // body colour (depth + sky tinted)
   x: number;
   y0: number;
   depth: number; // 0 near → 1 far, drives size/speed/altitude/tint
-  baseScale: number; // resting scale (depth-graded)
   speed: number;
   span: number; // x past which it respawns
   bobAmp: number;
@@ -164,17 +165,11 @@ export async function mountWorldPixi(
 
   // ---- preload the illustrated assets --------------------------------------
   const textures: Record<AssetKey, Texture> = {} as Record<AssetKey, Texture>;
-  let birdFrames: Texture[] = []; // 2-frame stop-motion flap (wings up / down)
-  await Promise.all([
-    ...ALL_KEYS.map(async (k) => {
+  await Promise.all(
+    ALL_KEYS.map(async (k) => {
       textures[k] = await Assets.load(`${BASE}${k}.webp`);
     }),
-    (async () => {
-      birdFrames = (await Promise.all(
-        ["bird1", "bird2"].map((n) => Assets.load(`${BASE}${n}.webp`)),
-      )) as Texture[];
-    })(),
-  ]);
+  );
 
   // ---- Pixi application (transparent, full-screen) -------------------------
   const app = new Application();
@@ -364,6 +359,39 @@ export async function mountWorldPixi(
     return tex;
   }
 
+  // A small side-view songbird drawn facing +x (right). `flap` ∈ [-1,1] sets the
+  // wing elevation (+1 = up-stroke, -1 = down-stroke). The body never mirrors, so
+  // the bird can't "flip" as it flaps. Redrawn each frame — just a few shapes.
+  // A small bird seen from below as it flies across — the universal "two swept
+  // wings + a little body" silhouette (a swift/swallow). It's symmetric, so it has
+  // no left/right facing and can NEVER flip; `flap` ∈ [-1,1] raises the wingtips
+  // into a V (up-stroke) or lowers them (down-stroke). Wing-dominant, so it always
+  // reads as a bird (never a body-blob).
+  function drawBird(g: Graphics, u: number, flap: number, color: number) {
+    g.clear();
+    const c = { color };
+    const tipY = -flap * 0.6 * u; // up-stroke → wingtips up (negative)
+    const midY = -flap * 0.22 * u;
+    const span = 1.02 * u;
+    const sweep = 0.34 * u; // wings rake backward (downward in this view)
+    // left wing — a tapered, slightly swept blade
+    g.moveTo(-0.05 * u, 0.04 * u)
+      .quadraticCurveTo(-0.52 * span, midY + sweep * 0.4, -span, tipY + sweep)
+      .quadraticCurveTo(-0.55 * span, midY + 0.16 * u, -0.05 * u, 0.12 * u)
+      .closePath()
+      .fill(c);
+    // right wing — mirror
+    g.moveTo(0.05 * u, 0.04 * u)
+      .quadraticCurveTo(0.52 * span, midY + sweep * 0.4, span, tipY + sweep)
+      .quadraticCurveTo(0.55 * span, midY + 0.16 * u, 0.05 * u, 0.12 * u)
+      .closePath()
+      .fill(c);
+    // little body + head + a hint of tail
+    g.ellipse(0, 0.04 * u, 0.1 * u, 0.18 * u).fill(c);
+    g.circle(0, -0.12 * u, 0.08 * u).fill(c);
+    g.poly([-0.06 * u, 0.16 * u, 0, 0.34 * u, 0.06 * u, 0.16 * u]).fill(c);
+  }
+
   // Redraw the gradient sky for the current palette + hour.
   function drawSky() {
     if (destroyed || !skyG) return;
@@ -442,17 +470,17 @@ export async function mountWorldPixi(
 
     moonG.clear();
     if (mp.up && night) {
-      const R = Math.round(H * 0.044);
-      // A luminous full moon: a soft halo, a pale disc with a gentle upper glow,
-      // and a few very faint maria for a touch of surface dimension (no crescent).
-      moonG.circle(0, 0, R * 3).fill({ color: pal.tuft, alpha: 0.07 });
-      moonG.circle(0, 0, R * 1.9).fill({ color: pal.tuft, alpha: 0.14 });
-      moonG.circle(0, 0, R * 1.28).fill({ color: pal.tuft, alpha: 0.3 });
-      moonG.circle(0, 0, R).fill({ color: mix(pal.tuft, pal.sunCore, 0.18) });
-      moonG.circle(0, -R * 0.12, R * 0.85).fill({ color: pal.tuft, alpha: 0.5 }); // soft upper glow
-      moonG.circle(-R * 0.3, -R * 0.22, R * 0.2).fill({ color: mix(pal.tuft, pal.glow, 0.4), alpha: 0.16 });
-      moonG.circle(R * 0.24, R * 0.16, R * 0.15).fill({ color: mix(pal.tuft, pal.glow, 0.4), alpha: 0.13 });
-      moonG.circle(R * 0.05, -R * 0.34, R * 0.1).fill({ color: mix(pal.tuft, pal.glow, 0.4), alpha: 0.12 });
+      const R = Math.round(H * 0.046);
+      // A clean, luminous full moon: a soft graduated halo, a pale disc, and a
+      // gentle highlight toward the upper-left so it reads as a lit sphere — no
+      // maria (they read as smudges) and no crescent.
+      moonG.circle(0, 0, R * 3.2).fill({ color: pal.tuft, alpha: 0.05 });
+      moonG.circle(0, 0, R * 2.3).fill({ color: pal.tuft, alpha: 0.09 });
+      moonG.circle(0, 0, R * 1.6).fill({ color: pal.tuft, alpha: 0.16 });
+      moonG.circle(0, 0, R * 1.18).fill({ color: pal.tuft, alpha: 0.32 });
+      moonG.circle(0, 0, R).fill({ color: mix(pal.tuft, pal.glow, 0.1) }); // disc
+      moonG.circle(-R * 0.2, -R * 0.22, R * 0.66).fill({ color: pal.sunCore, alpha: 0.32 }); // soft sphere highlight
+      moonG.circle(-R * 0.3, -R * 0.32, R * 0.34).fill({ color: pal.sunCore, alpha: 0.4 });
       moonG.x = mp.x;
       moonG.y = mp.y;
       moonG.visible = true;
@@ -511,8 +539,9 @@ export async function mountWorldPixi(
       }
     }
     // flock birds fade toward the sky with depth so far ones nearly dissolve
+    // (the per-frame redraw in onTick picks up this colour next frame)
     for (const b of flock) {
-      b.s.tint = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, b.depth * 0.45);
+      b.color = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, b.depth * 0.45);
     }
     // clouds take the palette's cloud colour, warmed slightly toward the glow
     for (const c of clouds) {
@@ -766,22 +795,40 @@ export async function mountWorldPixi(
       const yTop = HZ + groundSpan * 0.46; // just below the formation bases
       const band = H - yTop;
       const peb = new Graphics();
-      const nPeb = Math.round(lw / 18);
+      const nPeb = Math.round(lw / 11);
       for (let k = 0; k < nPeb; k++) {
         const d = r(); // 0 = far/top, 1 = near/bottom
         const x = r() * lw;
-        const y = yTop + Math.pow(d, 0.7) * band;
-        const sz = 1.2 + d * d * 5.5;
-        if (r() < 0.66) peb.ellipse(x, y, sz, sz * 0.62).fill({ color: 0xffffff });
-        else peb.rect(x, y, 0.8 + d * 1.6, 0.7 + d * 1.4).fill({ color: 0xffffff });
+        const y = yTop + Math.pow(d, 0.72) * band;
+        const roll = r();
+        if (roll < 0.48) {
+          // pebble
+          const sz = 1.1 + d * d * 5;
+          peb.ellipse(x, y, sz, sz * 0.6).fill({ color: 0xffffff });
+        } else if (roll < 0.78) {
+          // dry-grass tick / slanted dash
+          const len = 1.6 + d * 4.5;
+          peb
+            .moveTo(x, y)
+            .lineTo(x + (r() - 0.5) * 1.6, y - len)
+            .stroke({ color: 0xffffff, width: 0.8 + d * 0.6 });
+        } else if (roll < 0.93) {
+          // fine speck
+          peb.circle(x, y, 0.6 + d * 0.8).fill({ color: 0xffffff });
+        } else {
+          // occasional bigger stone, only in the nearer band
+          const sz = 3 + d * 6;
+          const sy = yTop + (0.5 + d * 0.5) * band;
+          peb.ellipse(x, sy, sz, sz * 0.55).fill({ color: 0xffffff });
+        }
       }
-      peb.alpha = 0.5;
-      peb.tint = mix(pal.rock, pal.sandDeep, 0.5);
+      peb.alpha = 0.55;
+      peb.tint = mix(pal.rock, pal.sandDeep, 0.45);
       L.c.addChild(peb);
       groundDetail.push({ g: peb, kind: "rock" });
 
       const spr = new Graphics();
-      const nSpr = Math.round(lw / 130);
+      const nSpr = Math.round(lw / 90);
       for (let k = 0; k < nSpr; k++) {
         const d = 0.35 + r() * 0.65;
         const x = r() * lw;
@@ -836,21 +883,27 @@ export async function mountWorldPixi(
       const L = addLayer(1.05);
       const lw = localW(1.05);
       const r = rnd(181);
-      const g = new Graphics();
-      const nRock = Math.max(4, Math.round(lw / 460));
+      const g = new Graphics(); // dark rock bodies
+      const hi = new Graphics(); // lighter sunlit tops (form)
+      const nRock = Math.max(5, Math.round(lw / 320));
       for (let k = 0; k < nRock; k++) {
-        const x = lw * ((k + 0.15 + r() * 0.7) / nRock);
+        const x = lw * ((k + 0.12 + r() * 0.76) / nRock);
         const y = H - 2 - r() * groundSpan * 0.07;
-        const w = 26 + r() * 48;
-        const h = w * (0.42 + r() * 0.3);
+        const w = 30 + r() * 54;
+        const h = w * (0.42 + r() * 0.32);
         g.ellipse(x, y - h * 0.5, w * 0.5, h * 0.5).fill({ color: 0xffffff });
-        g.ellipse(x - w * 0.22, y - h * 0.32, w * 0.32, h * 0.34).fill({ color: 0xffffff });
-        g.ellipse(x + w * 0.24, y - h * 0.3, w * 0.3, h * 0.32).fill({ color: 0xffffff });
+        g.ellipse(x - w * 0.22, y - h * 0.34, w * 0.32, h * 0.34).fill({ color: 0xffffff });
+        g.ellipse(x + w * 0.24, y - h * 0.32, w * 0.3, h * 0.32).fill({ color: 0xffffff });
+        hi.ellipse(x - w * 0.1, y - h * 0.66, w * 0.27, h * 0.2).fill({ color: 0xffffff });
       }
-      g.alpha = 0.92;
+      g.alpha = 0.94;
       g.tint = mix(pal.rock, pal.ink, 0.25);
+      hi.alpha = 0.45;
+      hi.tint = mix(pal.rock, pal.sandDeep, 0.4);
       L.c.addChild(g);
+      L.c.addChild(hi);
       groundDetail.push({ g, kind: "darkrock" });
+      groundDetail.push({ g: hi, kind: "rock" });
     }
 
     // ---- NEAR-FOREGROUND LIP — a low dune edge + a couple of close, larger,
@@ -1004,25 +1057,21 @@ export async function mountWorldPixi(
       for (let i = 0; i < n; i++) {
         // depth 0 = nearer/bigger/faster/lower, 1 = farther/smaller/slower/higher
         const depth = (i + r() * 0.6) / n;
-        // birds are a 2-frame stop-motion flap (wings up / wings down): build
-        // the sprite straight from the frame textures and size it to a target
-        // on-screen WIDTH (nearer = bigger). Both frames share dimensions, so the
-        // footprint stays constant as the texture swaps each beat.
-        const tex0 = birdFrames[0] ?? textures.bird;
-        const targetW = 22 + (1 - depth) * 22; // px
-        const baseScale = targetW / tex0.width;
-        const s = new Sprite(tex0);
-        s.anchor.set(0.5, 0.5);
-        s.scale.set(baseScale);
-        s.tint = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, depth * 0.45);
-        L.c.addChild(s);
+        // birds are drawn procedurally facing +x (right) so a flap can never flip
+        // their facing. Size unit scales with depth (nearer = bigger).
+        const u = 19 + (1 - depth) * 15;
+        const color = mix(mix(pal.ink, pal.skyTop, 0.25), pal.skyTop, depth * 0.45);
+        const g = new Graphics();
+        L.c.addChild(g);
+        drawBird(g, u, 0, color);
         const startX = -120 - r() * 220;
         flock.push({
-          s,
+          g,
+          u,
+          color,
           x: startX,
           y0: H * (0.14 + depth * 0.16 + r() * 0.04),
           depth,
-          baseScale,
           speed: 44 + (1 - depth) * 46 + r() * 16,
           span: W + 220,
           bobAmp: 6 + (1 - depth) * 10,
@@ -1123,10 +1172,10 @@ export async function mountWorldPixi(
       for (const b of flock) {
         if (b.spawnDelay > 0) {
           b.spawnDelay -= dt;
-          b.s.visible = false;
+          b.g.visible = false;
           continue;
         }
-        b.s.visible = true;
+        b.g.visible = true;
         b.x += b.speed * dt;
         if (b.x > b.span) {
           // re-enter from the left at a fresh altitude/speed after a short stagger
@@ -1135,13 +1184,11 @@ export async function mountWorldPixi(
           b.speed = 44 + Math.random() * 60;
           b.spawnDelay = 0.5 + Math.random() * 3.5;
         }
-        b.s.x = b.x;
-        b.s.y = b.y0 + Math.sin(time * b.bobSp + b.bobPh) * b.bobAmp;
-        // STOP-MOTION wing-flap: swap between the wings-up / wings-down frames.
-        if (birdFrames.length) {
-          const fi = Math.floor(time * b.flapSp + b.flapPh) % birdFrames.length;
-          b.s.texture = birdFrames[fi];
-        }
+        b.g.x = b.x;
+        b.g.y = b.y0 + Math.sin(time * b.bobSp + b.bobPh) * b.bobAmp;
+        // smooth wing-flap: redraw the (always right-facing) bird at the current
+        // wing elevation — a clean up/down beat that never flips facing.
+        drawBird(b.g, b.u, Math.sin(time * b.flapSp + b.flapPh), b.color);
       }
     }
 
