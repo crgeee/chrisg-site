@@ -223,7 +223,7 @@ export async function mountWorldPixi(
   let tumble: { s: Sprite; x: number; y: number; speed: number; spin: number; sc: number; delay: number } | null = null;
   let groundG: Graphics | null = null; // near sand band — re-tinted with the palette
   let nearDuneG: Graphics | null = null; // near-foreground dune lip (fastest parallax)
-  let groundDetail: { g: Graphics; kind: "rock" | "plant" | "darkrock" }[] = [];
+  let groundDetail: { g: Graphics; kind: "rock" | "plant" | "darkrock" | "shadow" | "ink" }[] = [];
 
   // ---- helpers -------------------------------------------------------------
   function addLayer(factor: number): Layer {
@@ -294,18 +294,20 @@ export async function mountWorldPixi(
 
   // The sun's normalised screen position for a given hour: it rises low in the
   // east (~6am), peaks at noon, and sets low in the west (~18–20h).
-  function sunPos(h: number, W: number, H: number): { x: number; y: number; up: boolean } {
+  function sunPos(h: number, W: number, H: number, HZ: number): { x: number; y: number; up: boolean } {
     // daylight window 5.5 → 20.5; t in 0..1 across it
     const lo = 5.5, hi = 20.5;
     const t = (h - lo) / (hi - lo);
     const up = t >= 0 && t <= 1;
     const x = W * (0.1 + 0.8 * Math.max(0, Math.min(1, t)));
     const arc = Math.sin(Math.max(0, Math.min(1, t)) * Math.PI); // 0 at horizon, 1 at noon
-    const y = H * (0.86 - 0.72 * arc);
+    // ride from the HORIZON (sunrise/sunset) up to a noon peak — never below the
+    // horizon into the foreground sand.
+    const y = HZ - arc * (HZ - H * 0.12);
     return { x, y, up };
   }
   // Moon rides the complementary arc (night window 18 → 6, wrapping midnight).
-  function moonPos(h: number, W: number, H: number): { x: number; y: number; up: boolean } {
+  function moonPos(h: number, W: number, H: number, HZ: number): { x: number; y: number; up: boolean } {
     let nh = h;
     if (nh >= 18) nh -= 18;
     else if (nh <= 6) nh += 6;
@@ -313,7 +315,7 @@ export async function mountWorldPixi(
     const t = nh / 12; // 0..1 across the night
     const x = W * (0.12 + 0.76 * t);
     const arc = Math.sin(t * Math.PI);
-    const y = H * (0.82 - 0.62 * arc);
+    const y = HZ - arc * (HZ - H * 0.16);
     return { x, y, up: true };
   }
 
@@ -410,12 +412,12 @@ export async function mountWorldPixi(
     skyG.rect(0, H * (horizon - 0.2), W, H * 0.3).fill({ fill: glow, alpha: night ? 0.16 : 0.38 });
 
     // sun + moon position/visibility
-    const sp = sunPos(hour, W, H);
-    const mp = moonPos(hour, W, H);
+    const sp = sunPos(hour, W, H, HZ);
+    const mp = moonPos(hour, W, H, HZ);
 
     // How low the sun sits (0 = noon, 1 = on the horizon). Drives BOTH the sunset
     // bloom and the sun's own size/warmth — it swells and goldens as it sets.
-    const sunLow = sp.up ? Math.max(0, Math.min(1, (sp.y / H - 0.42) / 0.44)) : 0;
+    const sunLow = sp.up ? Math.max(0, Math.min(1, (sp.y - H * 0.12) / (HZ - H * 0.12))) : 0;
 
     // Sunset / sunrise bloom: a warm wash swelling along the horizon under the sun.
     if (sp.up && sunLow > 0.04) {
@@ -488,8 +490,12 @@ export async function mountWorldPixi(
         gd.kind === "plant"
           ? mix(pal.plant, pal.sage, 0.45)
           : gd.kind === "darkrock"
-            ? mix(pal.rock, pal.ink, 0.25)
-            : mix(pal.rock, pal.sandDeep, 0.5);
+            ? mix(pal.rock, pal.ink, 0.28)
+            : gd.kind === "shadow"
+              ? mix(pal.ink, pal.sandDeep, 0.4)
+              : gd.kind === "ink"
+                ? pal.ink
+                : mix(pal.rock, pal.sandDeep, 0.45); // "rock" highlight
     }
     for (const t of tintables) {
       if (t.role === "formation") {
@@ -794,21 +800,26 @@ export async function mountWorldPixi(
       const lw = localW(0.84);
       const r = rnd(91);
       const plantPool: AssetKey[] = ["saguaro", "agave", "cottongrass", "agave", "cottongrass"];
-      const count = Math.round(lw / 260);
+      const count = Math.round(lw / 210);
       for (let i = 0; i < count; i++) {
-        const x = lw * ((i + r() * 0.85) / count);
+        const x = lw * ((i + r() * 0.9) / count);
         const key = plantPool[Math.floor(r() * plantPool.length)];
-        const baseY = H - 8 - r() * groundSpan * 0.28;
+        // depth d: 0 = near (big, low, opaque) → 1 = far (small, up near the
+        // horizon, faded). Biased toward the near plane so the foreground stays
+        // populated while the field genuinely recedes into the distance.
+        const d = r() * r();
+        const baseY = H - 6 - d * groundSpan * 0.6;
+        const ds = 1 - d * 0.58; // depth scale
         const w =
-          key === "saguaro" ? 54 + r() * 46 : key === "agave" ? 76 + r() * 54 : 50 + r() * 40;
-        const s = placeByWidth(L, key, x, baseY, w, "plant", { flip: r() > 0.5 });
+          (key === "saguaro" ? 54 + r() * 46 : key === "agave" ? 76 + r() * 54 : 50 + r() * 40) * ds;
+        const s = placeByWidth(L, key, x, baseY, w, "plant", { flip: r() > 0.5, alpha: 1 - d * 0.4 });
         // sway pivots near the base: nudge the anchor up so rotation looks rooted
         s.anchor.set(0.5, 0.97);
         // each plant sways at its own rate/phase, with a slow secondary "gust"
-        // beat so the field never pulses in unison.
+        // beat so the field never pulses in unison (far ones sway a touch less).
         swayers.push({
           s,
-          amp: 0.012 + r() * 0.026,
+          amp: (0.012 + r() * 0.026) * (0.55 + ds * 0.45),
           sp: 0.5 + r() * 0.7,
           ph: r() * 6.28,
           gust: 0.11 + r() * 0.17,
@@ -823,27 +834,52 @@ export async function mountWorldPixi(
       const L = addLayer(1.05);
       const lw = localW(1.05);
       const r = rnd(181);
+      const sh = new Graphics(); // soft cast shadows on the ground
       const g = new Graphics(); // dark rock bodies
       const hi = new Graphics(); // lighter sunlit tops (form)
-      const nRock = Math.max(5, Math.round(lw / 320));
+      const cr = new Graphics(); // dark crack/seam detail
+      const nRock = Math.max(6, Math.round(lw / 300));
       for (let k = 0; k < nRock; k++) {
-        const x = lw * ((k + 0.12 + r() * 0.76) / nRock);
-        const y = H - 2 - r() * groundSpan * 0.07;
-        const w = 30 + r() * 54;
-        const h = w * (0.42 + r() * 0.32);
+        const x = lw * ((k + 0.1 + r() * 0.8) / nRock);
+        const y = H - 2 - r() * groundSpan * 0.08;
+        const w = 24 + r() * 62;
+        const h = w * (0.4 + r() * 0.36);
+        // cast shadow — a flat, soft ellipse on the sand under the rock
+        sh.ellipse(x + w * 0.05, y, w * 0.6, h * 0.22).fill({ color: 0xffffff });
+        // body — a base ellipse plus 2–4 varied lobes so no two rocks match
         g.ellipse(x, y - h * 0.5, w * 0.5, h * 0.5).fill({ color: 0xffffff });
-        g.ellipse(x - w * 0.22, y - h * 0.34, w * 0.32, h * 0.34).fill({ color: 0xffffff });
-        g.ellipse(x + w * 0.24, y - h * 0.32, w * 0.3, h * 0.32).fill({ color: 0xffffff });
-        hi.ellipse(x - w * 0.1, y - h * 0.66, w * 0.27, h * 0.2).fill({ color: 0xffffff });
+        const lobes = 2 + Math.floor(r() * 3);
+        for (let j = 0; j < lobes; j++) {
+          const lx = x + (r() - 0.5) * w * 0.6;
+          const ly = y - h * (0.28 + r() * 0.42);
+          const lr = w * (0.16 + r() * 0.2);
+          g.ellipse(lx, ly, lr, lr * (0.7 + r() * 0.4)).fill({ color: 0xffffff });
+        }
+        // sunlit top + a crack/seam for detail
+        hi.ellipse(x - w * 0.12, y - h * 0.66, w * (0.18 + r() * 0.12), h * 0.2).fill({ color: 0xffffff });
+        if (r() < 0.75) {
+          const cx = x + (r() - 0.5) * w * 0.3;
+          cr.moveTo(cx, y - h * 0.72)
+            .lineTo(cx + (r() - 0.5) * w * 0.22, y - h * 0.2)
+            .stroke({ color: 0xffffff, width: 0.8 + r() * 0.9 });
+        }
       }
-      g.alpha = 0.94;
-      g.tint = mix(pal.rock, pal.ink, 0.25);
-      hi.alpha = 0.45;
+      sh.alpha = 0.16;
+      sh.tint = mix(pal.ink, pal.sandDeep, 0.4);
+      g.alpha = 0.95;
+      g.tint = mix(pal.rock, pal.ink, 0.28);
+      hi.alpha = 0.42;
       hi.tint = mix(pal.rock, pal.sandDeep, 0.4);
+      cr.alpha = 0.5;
+      cr.tint = pal.ink;
+      L.c.addChild(sh);
       L.c.addChild(g);
       L.c.addChild(hi);
+      L.c.addChild(cr);
+      groundDetail.push({ g: sh, kind: "shadow" });
       groundDetail.push({ g, kind: "darkrock" });
       groundDetail.push({ g: hi, kind: "rock" });
+      groundDetail.push({ g: cr, kind: "ink" });
     }
 
     // ---- NEAR-FOREGROUND LIP — a low dune edge + a couple of close, larger,

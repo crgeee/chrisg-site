@@ -57,6 +57,10 @@ function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
+function relLuma(hex: string): number {
+  const [r, g, b] = hexToRgb(hex);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
 function rgbToHex(r: number, g: number, b: number): string {
   const c = (v: number) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0");
   return `#${c(r)}${c(g)}${c(b)}`;
@@ -83,6 +87,9 @@ export function paletteAt(hour: number): Vars {
   const t = (h - m0.h) / span;
   const out: Vars = {};
   for (const k of KEYS) out[k] = mixHex(m0.set[k], m1.set[k], t);
+  // Wordmark contrast: pick the name colour from the SKY's brightness with a hard
+  // threshold so it always reads — never a low-contrast mid-tone at dusk/dawn.
+  out["sky-ink"] = relLuma(out["sky-top"]) < 0.5 ? "#efe9f4" : "#2c211b";
   return out;
 }
 

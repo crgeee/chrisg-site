@@ -145,7 +145,7 @@ export function createWorldCore(root: HTMLElement, SITE: SiteContent): WorldCore
       // actual width. Only shift left/right when the screen is wide enough.
       const panelW = W <= 720 ? Math.min(0.86 * W, 360) : Math.min(0.78 * W, 392);
       const left = onRight
-        ? Si * panelFactor + W * 0.52
+        ? Si * panelFactor + (W * 0.94 - panelW) // flush right: 6% margin, mirroring the left
         : wide
           ? Si * panelFactor + W * 0.06
           : Si * panelFactor + (W - panelW) / 2;
@@ -309,14 +309,9 @@ export function createWorldCore(root: HTMLElement, SITE: SiteContent): WorldCore
       markInteract();
     };
     const move = (e: MouseEvent | TouchEvent) => {
-      const isTouch = "touches" in e;
-      const mx = isTouch ? e.touches[0].clientX : e.clientX;
-      const my = isTouch ? e.touches[0].clientY : e.clientY;
-      if (!isTouch) {
-        curXT = (mx / layout.W - 0.5) * -34;
-        curYT = (my / layout.H - 0.5) * -18;
-      }
+      // No hover/cursor parallax — the world only moves when you actually drag.
       if (!dragging) return;
+      const mx = "touches" in e ? e.touches[0].clientX : e.clientX;
       const dx = mx - lastX;
       scroll -= dx;
       const nowT = performance.now();
