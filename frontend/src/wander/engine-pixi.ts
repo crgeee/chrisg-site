@@ -361,11 +361,10 @@ export async function mountWorldPixi(
         prev = pick;
         const key = pool[pick];
         const w = (220 + r() * 200) * (key === "spires" ? 0.8 : 1);
-        const s = placeSprite(L, key, x + (r() - 0.5) * 60, baseY + (r() - 0.5) * 12, w, "far", {
-          alpha: 0.94,
+        placeSprite(L, key, x + (r() - 0.5) * 60, baseY + (r() - 0.5) * 12, w, "far", {
+          alpha: 0.9,
           flip: r() > 0.5,
         });
-        s.alpha = 0.9;
       }
     }
 
