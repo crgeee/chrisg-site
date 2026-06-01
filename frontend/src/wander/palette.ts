@@ -14,7 +14,7 @@ const SUN: Vars = {
   "glow": "#f6d9bf", "cloud": "#f3d0cf", "land-far": "#e3c6bf", "land-mid": "#d6a99e",
   "hill": "#cd9588", "butte": "#cb9184", "bank": "#dec9a6", "sand": "#eedfc6",
   "sand-deep": "#ddc8a6", "river": "#8ea7c2", "river-hi": "#d6e1ea", "rock": "#9a7163",
-  "pine": "#6b5a48", "sage": "#9aa07b", "ink": "#3c2c25", "ink-soft": "#6d5347",
+  "pine": "#6b5a48", "sage": "#9aa07b", "ink": "#3c2c25", "ink-soft": "#6d5347", "sky-ink": "#3c2c25",
   "plant": "#5e7e56", "tuft": "#f9f6ef", "panel": "#f1e9d7", "panel-edge": "#362620",
   "panel-ink": "#362620",
 };
@@ -25,7 +25,7 @@ const DAY: Vars = {
   "glow": "#f4dcc6", "cloud": "#ecdbd2", "land-far": "#e2c8bf", "land-mid": "#d2a89e",
   "hill": "#c89485", "butte": "#c79284", "bank": "#dfcaa6", "sand": "#efe1c8",
   "sand-deep": "#ddc8a4", "river": "#a9c0cc", "river-hi": "#eadfc8", "rock": "#9c7264",
-  "pine": "#706c3a", "sage": "#9c9560", "ink": "#3a2c22", "ink-soft": "#74583e",
+  "pine": "#706c3a", "sage": "#9c9560", "ink": "#3a2c22", "ink-soft": "#74583e", "sky-ink": "#3a2c22",
   "plant": "#7c8a52", "tuft": "#f7f0de", "panel": "#f1e3c6", "panel-edge": "#3a281a",
   "panel-ink": "#3a281a",
 };
@@ -34,7 +34,7 @@ const NIGHT: Vars = {
   "glow": "#9a83b0", "cloud": "#8d7da0", "land-far": "#6f6593", "land-mid": "#5a4f7a",
   "hill": "#4d4370", "butte": "#4b4170", "bank": "#736a93", "sand": "#897fa6",
   "sand-deep": "#776a96", "river": "#33426a", "river-hi": "#6b78a0", "rock": "#332b4a",
-  "pine": "#2a2842", "sage": "#5e5a7e", "ink": "#1d1828", "ink-soft": "#3f3656",
+  "pine": "#2a2842", "sage": "#5e5a7e", "ink": "#1d1828", "ink-soft": "#3f3656", "sky-ink": "#e9e3f2",
   "plant": "#55687e", "tuft": "#e7e1f0", "panel": "#e2dcec", "panel-edge": "#231c38",
   "panel-ink": "#231c38",
 };
