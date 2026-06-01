@@ -317,6 +317,71 @@ body.wander-lock { overflow: hidden; overscroll-behavior: none; }
 }
 .wander .sheet button.dest:hover { background: color-mix(in oklab, var(--panel-edge) 10%, transparent); }
 .wander .sheet button.dest .n { font-size: 12px; color: var(--ink-soft); }
+.wander .sheet-sep { height: 1px; margin: 6px 8px; background: color-mix(in oklab, var(--panel-edge) 18%, transparent); }
+.wander .sheet-customize {
+  display: flex; width: 100%; justify-content: space-between; align-items: baseline;
+  background: none; border: none; cursor: pointer; text-align: left;
+  padding: 9px 10px; border-radius: 4px; color: var(--panel-ink); font: inherit; font-size: 15px;
+  transition: background .15s ease;
+}
+.wander .sheet-customize:hover { background: color-mix(in oklab, var(--panel-edge) 10%, transparent); }
+.wander .sheet-customize .n { font-size: 14px; color: var(--ink-soft); }
+
+/* ---- Customize (time-of-day) screen ---- */
+.wander .customize {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: color-mix(in oklab, var(--ink) 24%, transparent);
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
+}
+.wander .customize.open { opacity: 1; pointer-events: auto; }
+.wander .customize__card {
+  position: relative; width: min(92vw, 420px);
+  background: linear-gradient(157deg,
+    color-mix(in oklab, var(--panel) 90%, #fff) 0%, var(--panel) 60%,
+    color-mix(in oklab, var(--panel) 88%, var(--panel-edge)) 100%);
+  color: var(--panel-ink);
+  border: 2.2px solid var(--panel-edge); border-radius: 5px 9px 6px 10px;
+  padding: 26px 26px 22px;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--panel-edge) 18%, transparent),
+              0 30px 60px -24px rgba(30,18,10,.6);
+  transform: translateY(10px) scale(.98); transition: transform .3s ease;
+}
+.wander .customize.open .customize__card { transform: none; }
+.wander .customize__close {
+  position: absolute; top: 8px; right: 12px;
+  width: 30px; height: 30px; border: none; background: none; cursor: pointer;
+  font-size: 24px; line-height: 1; color: var(--ink-soft);
+}
+.wander .customize__close:hover { color: var(--panel-ink); }
+.wander .customize__eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); margin: 0; }
+.wander .customize__title { font-family: "Newsreader", Georgia, serif; font-weight: 500; font-size: 24px; margin: 4px 0 0; letter-spacing: -.01em; }
+.wander .customize__time { font-family: "Newsreader", Georgia, serif; font-size: 30px; margin: 8px 0 16px; color: var(--panel-ink); }
+.wander .customize__slider {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px; outline: none; cursor: pointer;
+  background: linear-gradient(90deg, #3c4170 0%, #8d7aa0 14%, #fae6a2 34%, #f7c869 52%, #fae6a2 70%, #8d7aa0 86%, #3c4170 100%);
+}
+.wander .customize__slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--panel-edge); box-shadow: 0 2px 6px rgba(0,0,0,.3); cursor: grab;
+}
+.wander .customize__slider::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--panel-edge); cursor: grab;
+}
+.wander .customize__marks { display: flex; justify-content: space-between; margin: 7px 2px 0; font-size: 10.5px; letter-spacing: .04em; color: var(--ink-soft); }
+.wander .customize__actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
+.wander .customize__auto {
+  background: none; border: none; cursor: pointer; font: inherit; font-size: 13px;
+  color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; padding: 6px 2px;
+}
+.wander .customize__auto:hover { color: var(--panel-ink); }
+.wander .customize__done {
+  background: var(--panel-edge); color: var(--panel); border: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 500; padding: 9px 22px; border-radius: 999px;
+  transition: transform .15s ease;
+}
+.wander .customize__done:hover { transform: translateY(-1px); }
 
 /* reduced motion */
 @media (prefers-reduced-motion: reduce) {
