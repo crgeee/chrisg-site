@@ -4,7 +4,12 @@ import Layout from "./components/Layout";
 import ScrollToTop from "./components/ScrollToTop";
 import ProtectedRoute from "./components/ProtectedRoute";
 import WanderWorld from "./wander/WanderWorld";
+import { PIXI_WORLD } from "./wander/featureFlags";
 import { useAuth } from "./hooks/useAuth";
+
+// The Pixi (WebGL) world is lazy-loaded so the Pixi bundle is code-split and
+// never weighs down the SVG homepage or the blog/admin routes.
+const PixiWanderWorld = lazy(() => import("./wander/PixiWanderWorld"));
 
 const BlogList = lazy(() => import("./pages/BlogList"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
@@ -20,8 +25,13 @@ export default function App() {
       <ScrollToTop />
       <Suspense fallback={null}>
         <Routes>
-          {/* The whole "site" is the wandering world. */}
-          <Route path="/" element={<WanderWorld />} />
+          {/* The whole "site" is the wandering world. The Pixi (WebGL) engine is
+              now the default (PIXI_WORLD on); fall back to the SVG engine with
+              `?svg=1` or a `VITE_PIXI_WORLD=false` build. */}
+          <Route path="/" element={PIXI_WORLD ? <PixiWanderWorld /> : <WanderWorld />} />
+
+          {/* Debug route: always render the Pixi path, regardless of the flag. */}
+          <Route path="/wander-v2" element={<PixiWanderWorld />} />
 
           {/* Blog (reading) + admin keep the simple chrome. */}
           <Route element={<Layout />}>

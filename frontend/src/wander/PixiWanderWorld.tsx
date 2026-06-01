@@ -1,31 +1,64 @@
 import { useEffect, useRef } from "react";
-import { mountWorld } from "./engine";
+import { mountWorldPixi } from "./engine-pixi";
 import { Art } from "./art";
 import { SITE } from "./content";
 import "./wander.css";
 
 /**
- * Full-screen "wandering portfolio" — a drag-to-explore illustrated desert
- * with five content stations. Renders the DOM scaffold and runs the vanilla
- * engine inside it, tearing the engine down on unmount.
+ * Experimental Pixi.js v8 (WebGL) render path for the wandering portfolio,
+ * behind the `?pixi=1` flag and the `/wander-v2` debug route. It renders the
+ * exact same DOM scaffold as the production `WanderWorld` (so `wander.css`, the
+ * content panels, the UI chrome and the Customize screen all work unchanged),
+ * but the desert scenery is painted by a transparent, full-screen Pixi
+ * `Application` using real illustrated PNG assets over a programmatic
+ * time-of-day sky — instead of layered procedural SVG.
+ *
+ * Input / momentum / snap / stations / panels are shared with the SVG path via
+ * `worldCore`; the time-of-day palette + Customize slider are shared via main's
+ * `palette.ts`, read back into Pixi tints by `pixiTint.ts`.
+ *
+ * The engine is async (Pixi v8's `Application.init()` + asset preload are
+ * promises), so we guard teardown against an unmount that races init, and tear
+ * the Pixi app + all listeners down fully on unmount.
  */
-export default function WanderWorld() {
+export default function PixiWanderWorld() {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.title = `${SITE.name} — a wandering portfolio`;
     document.body.classList.add("wander-lock");
     const root = rootRef.current;
-    const destroy = root ? mountWorld(root, SITE, Art) : () => {};
+
+    let destroy: (() => void) | null = null;
+    let cancelled = false;
+
+    // The Pixi engine mounts imperatively and destructively rebuilds #world.
+    // React StrictMode (dev) deliberately mounts → unmounts → remounts, which
+    // would race TWO async engine instances over the same DOM (the live ticker
+    // could end up pointing at a holder the other instance already wiped, so
+    // the content panels stop tracking the scroll). Defer the heavy mount one
+    // frame: StrictMode's synchronous cleanup cancels this first invocation
+    // before it ever touches the DOM, so exactly one engine is built.
+    const raf = requestAnimationFrame(() => {
+      if (cancelled || !root) return;
+      mountWorldPixi(root, SITE, Art).then((d) => {
+        if (cancelled) d();
+        else destroy = d;
+      });
+    });
+
     return () => {
-      destroy();
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      if (destroy) destroy();
       document.body.classList.remove("wander-lock");
     };
   }, []);
 
   return (
     <div className="wander" data-palette="sunset" ref={rootRef}>
-      {/* shared filters: hand-drawn edge wobble for the landforms */}
+      {/* shared filters: hand-drawn edge wobble for the DOM panels' styling.
+          The Pixi canvas paints its own illustrated scenery. */}
       <svg className="wander-defs" aria-hidden="true" width="0" height="0">
         <defs>
           <filter id="wob" x="-6%" y="-6%" width="112%" height="112%">
@@ -87,6 +120,9 @@ export default function WanderWorld() {
             <button className="customize__auto">Use my local time</button>
             <button className="customize__done">Done</button>
           </div>
+          <p className="customize__colophon">
+            Landscape inspired by the red-rock country around Sedona, Arizona.
+          </p>
         </div>
       </div>
     </div>
