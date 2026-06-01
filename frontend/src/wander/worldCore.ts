@@ -132,12 +132,17 @@ export function createWorldCore(root: HTMLElement, SITE: SiteContent): WorldCore
     let html = "";
     SITE.stations.forEach((st, i) => {
       const Si = i * stationStep;
-      // Alternate the panel side through the stations: even = left, odd = right.
-      // (The hero formation is placed on the opposite side so each screen reads
-      // as a balanced composition rather than always panel-left.)
-      const onRight = i % 2 === 1;
-      const left = Si * panelFactor + (onRight ? W * 0.56 : W * 0.06);
-      const top = H * (0.19 + (i % 2) * 0.05);
+      // On a WIDE screen, alternate the panel side through the stations (even =
+      // left, odd = right) for a balanced composition. On a NARROW screen the
+      // panel is ~86vw (it nearly fills the width), so there is no room to shift
+      // it sideways — centre every panel instead, otherwise the right-side ones
+      // run off-screen. 900px is the threshold where a side panel + open space fit.
+      const wide = W >= 900;
+      const onRight = wide && i % 2 === 1;
+      const left = onRight
+        ? Si * panelFactor + W * 0.52
+        : Si * panelFactor + (wide ? W * 0.06 : W * 0.07);
+      const top = H * (0.19 + (i % 2) * (wide ? 0.05 : 0.03));
       const isIntro = i === 0;
       let links = "";
       if (st.links && st.links.length) {
