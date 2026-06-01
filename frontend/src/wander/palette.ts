@@ -7,22 +7,26 @@ type Vars = Record<string, string>;
 
 // Day key-moments, reusing three coherent palettes:
 //   SUN  = warm pastel sunrise/sunset · DAY = golden daylight · NIGHT = dusk/twilight
+// SUN = soft pastel sunrise/sunset: pale blue zenith easing to a peach horizon,
+// pale dusty-rose formations — gentle, never saturated.
 const SUN: Vars = {
-  "sky-top": "#a6c6d8", "sky-bot": "#f8dccb", "sun": "#fae6a2", "sun-core": "#fff5d2",
-  "glow": "#f8d79a", "cloud": "#f3c9cd", "land-far": "#ddc1b9", "land-mid": "#cd9f93",
-  "hill": "#c1897c", "butte": "#bd8071", "bank": "#dac99e", "sand": "#ecdabd",
-  "sand-deep": "#dcc69f", "river": "#8ea7c2", "river-hi": "#d6e1ea", "rock": "#7e5448",
-  "pine": "#6b5a48", "sage": "#9aa07b", "ink": "#362620", "ink-soft": "#6d5347",
+  "sky-top": "#aecbe0", "sky-bot": "#f7dccb", "sun": "#fbecc4", "sun-core": "#fdf6e6",
+  "glow": "#f6d9bf", "cloud": "#f3d0cf", "land-far": "#e3c6bf", "land-mid": "#d6a99e",
+  "hill": "#cd9588", "butte": "#cb9184", "bank": "#dec9a6", "sand": "#eedfc6",
+  "sand-deep": "#ddc8a6", "river": "#8ea7c2", "river-hi": "#d6e1ea", "rock": "#9a7163",
+  "pine": "#6b5a48", "sage": "#9aa07b", "ink": "#3c2c25", "ink-soft": "#6d5347",
   "plant": "#5e7e56", "tuft": "#f9f6ef", "panel": "#f1e9d7", "panel-edge": "#362620",
   "panel-ink": "#362620",
 };
+// DAY = gentle pastel daylight: a soft pale blue→peach sky and pale dusty-rose
+// formations, deliberately desaturated so daytime never reads golden/orange.
 const DAY: Vars = {
-  "sky-top": "#e7c492", "sky-bot": "#f6e6c0", "sun": "#f7c869", "sun-core": "#fff0c8",
-  "glow": "#f7c869", "cloud": "#f2d3a3", "land-far": "#dcb88c", "land-mid": "#cb9c6c",
-  "hill": "#bf8455", "butte": "#c0875a", "bank": "#dcc28e", "sand": "#edd8ad",
-  "sand-deep": "#dcc086", "river": "#cfb277", "river-hi": "#f0dcab", "rock": "#7d4f32",
-  "pine": "#706c3a", "sage": "#9c9560", "ink": "#3a281a", "ink-soft": "#74583e",
-  "plant": "#7e7c41", "tuft": "#f7f0de", "panel": "#f1e3c6", "panel-edge": "#3a281a",
+  "sky-top": "#bcd6e6", "sky-bot": "#f3e2d2", "sun": "#fbeccb", "sun-core": "#fef8ea",
+  "glow": "#f4dcc6", "cloud": "#ecdbd2", "land-far": "#e2c8bf", "land-mid": "#d2a89e",
+  "hill": "#c89485", "butte": "#c79284", "bank": "#dfcaa6", "sand": "#efe1c8",
+  "sand-deep": "#ddc8a4", "river": "#a9c0cc", "river-hi": "#eadfc8", "rock": "#9c7264",
+  "pine": "#706c3a", "sage": "#9c9560", "ink": "#3a2c22", "ink-soft": "#74583e",
+  "plant": "#7c8a52", "tuft": "#f7f0de", "panel": "#f1e3c6", "panel-edge": "#3a281a",
   "panel-ink": "#3a281a",
 };
 const NIGHT: Vars = {

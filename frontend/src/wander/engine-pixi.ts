@@ -7,12 +7,18 @@
 //
 //   • a Pixi Graphics SKY that cycles sunrise → day → golden → sunset → night,
 //     with a sun that arcs across the sky by time of day and a moon at night;
-//   • parallax LAND layers across the wide world, with formation variety per
-//     region (mesa / arch / spires / butte mixed; a far range tiled hazily),
-//     every land sprite tinted by the time-of-day land colours;
+//   • a believable, VARIED landscape: a deck of named formation assets
+//     (cliff / mitten / twins / mesa / bluff / spires / hoodoos / arch) placed
+//     by depth so they read like a real place at different distances — farther
+//     ones are smaller, hazier (tint blended toward the sky), lower-contrast and
+//     parallax slower; nearer ones are larger, more saturated and parallax
+//     faster. No type repeats adjacent; every instance is uniquely seeded (scale,
+//     flip, vertical offset, tint jitter). The far skyline is built from several
+//     small hazed instances (the `range` asset + small formations) with gaps —
+//     never one PNG tiled into a strip;
 //   • animated CRITTERS — roadrunner & lizard wander + pause + flip, jackrabbit
 //     hops, a bird flies across the sky, a tumbleweed rolls + respawns, plants
-//     sway about their base — plus drifting dust.
+//     (saguaro / agave / cottongrass) sway about their base — plus drifting dust.
 //
 // It reuses the render-agnostic controller in `worldCore.ts` for input,
 // momentum, snap-to-station, keyboard nav, the UI chrome and the HTML content
@@ -39,19 +45,45 @@ import { paletteAt, applyPalette, localHourNow } from "./palette";
 
 // ---- asset manifest (copied + renamed into /wander-assets) -----------------
 const BASE = "/wander-assets/";
-const FORMATIONS = ["mesa", "butte", "arch", "spires", "range", "boulders"] as const;
-const PLANTS = ["saguaro", "agave", "grass"] as const;
+// Iconic formations, varied in shape — mixed across the world by depth + region.
+const FORMATIONS = [
+  "cliff",
+  "mitten",
+  "twins",
+  "mesa",
+  "bluff",
+  "spires",
+  "hoodoos",
+  "arch",
+] as const;
+const RANGE = "range" as const;
+const PLANTS = ["saguaro", "agave", "cottongrass"] as const;
 const CRITTERS = ["jackrabbit", "roadrunner", "lizard", "bird", "tumbleweed"] as const;
+type FormationKey = (typeof FORMATIONS)[number];
 type AssetKey =
-  | (typeof FORMATIONS)[number]
+  | FormationKey
+  | typeof RANGE
   | (typeof PLANTS)[number]
   | (typeof CRITTERS)[number];
-const ALL_KEYS: AssetKey[] = [...FORMATIONS, ...PLANTS, ...CRITTERS];
+const ALL_KEYS: AssetKey[] = [...FORMATIONS, RANGE, ...PLANTS, ...CRITTERS];
 
+// A formation asset's natural ground-height as a fraction of its bitmap height —
+// i.e. how much of the PNG is "above the base line". All of these illustrations
+// are framed with the base resting on the bottom edge, so we scale by a target
+// on-screen HEIGHT (not width) to keep wildly different aspect ratios reading at
+// a consistent ground-relative size.
 type Layer = { c: Container; factor: number };
 
-// A sprite that gets re-tinted each time the palette changes.
-type Tintable = { s: Sprite; role: "land" | "far" | "plant" | "ink" };
+// A sprite that gets re-tinted each time the palette changes. `haze` (0..1) is
+// the atmospheric-perspective amount — how far this instance's tint is blended
+// toward the sky/horizon colour (farther = hazier). `jitter` adds a small
+// per-instance hue nudge so no two formations tint identically.
+type Tintable = {
+  s: Sprite;
+  role: "formation" | "plant" | "ink";
+  haze: number;
+  jitter: number;
+};
 
 // Wandering ground critter (roadrunner / lizard): walk + pause + flip.
 type Wanderer = {
@@ -122,6 +154,7 @@ export async function mountWorldPixi(
     autoDensity: true,
     resizeTo: window,
     powerPreference: "high-performance",
+    preserveDrawingBuffer: true,
   });
 
   let destroyed = false;
@@ -166,6 +199,7 @@ export async function mountWorldPixi(
   let dust: Dust[] = [];
   let bird: { s: Sprite; x: number; y0: number; speed: number; span: number } | null = null;
   let tumble: { s: Sprite; x: number; y: number; speed: number; spin: number; sc: number } | null = null;
+  let groundG: Graphics | null = null; // near sand band — re-tinted with the palette
 
   // ---- helpers -------------------------------------------------------------
   function addLayer(factor: number): Layer {
@@ -176,8 +210,33 @@ export async function mountWorldPixi(
     return L;
   }
 
-  // Place a tinted formation/plant sprite anchored at its base-centre.
-  function placeSprite(
+  // Place a tinted formation/plant sprite scaled to a target on-screen HEIGHT
+  // and anchored at its base-centre. `haze`/`jitter` feed the re-tint pass.
+  function placeFormation(
+    L: Layer,
+    key: FormationKey | typeof RANGE,
+    x: number,
+    baseY: number,
+    targetH: number,
+    haze: number,
+    jitter: number,
+    opts: { alpha?: number; flip?: boolean } = {},
+  ): Sprite {
+    const tex = textures[key];
+    const s = new Sprite(tex);
+    s.anchor.set(0.5, 1);
+    const scale = targetH / tex.height;
+    s.scale.set((opts.flip ? -1 : 1) * scale, scale);
+    s.x = x;
+    s.y = baseY;
+    if (opts.alpha != null) s.alpha = opts.alpha;
+    L.c.addChild(s);
+    tintables.push({ s, role: "formation", haze, jitter });
+    return s;
+  }
+
+  // Place a sprite scaled to a target on-screen WIDTH (plants/critters).
+  function placeByWidth(
     L: Layer,
     key: AssetKey,
     x: number,
@@ -195,7 +254,7 @@ export async function mountWorldPixi(
     s.y = baseY;
     if (opts.alpha != null) s.alpha = opts.alpha;
     L.c.addChild(s);
-    tintables.push({ s, role });
+    tintables.push({ s, role, haze: 0, jitter: 0 });
     return s;
   }
 
@@ -224,6 +283,11 @@ export async function mountWorldPixi(
     return { x, y, up: true };
   }
 
+  // The colour the haze blends toward: the pale band just above the horizon.
+  function hazeColor(): number {
+    return mix(pal.skyBot, pal.glow, 0.4);
+  }
+
   // Redraw the gradient sky for the current palette + hour.
   function drawSky() {
     if (destroyed || !skyG) return;
@@ -232,33 +296,36 @@ export async function mountWorldPixi(
     const horizon = HZ / H;
 
     skyG.clear();
+    // A SOFT pastel sky: a gentle blue at the top easing through a pale band into
+    // a peach/rose glow at the horizon — never a hard or saturated transition.
     const grad = new FillGradient({
       type: "linear",
       start: { x: 0, y: 0 },
       end: { x: 0, y: 1 },
       colorStops: [
         { offset: 0, color: pal.skyTop },
-        { offset: Math.max(0.05, horizon - 0.32), color: mix(pal.skyTop, pal.skyBot, 0.5) },
-        { offset: horizon - 0.06, color: pal.skyBot },
-        { offset: horizon, color: mix(pal.skyBot, pal.glow, 0.55) },
-        { offset: Math.min(0.98, horizon + 0.04), color: mix(pal.glow, pal.landFar, 0.45) },
-        { offset: 1, color: mix(pal.sand, pal.sandDeep, 0.4) },
+        { offset: Math.max(0.05, horizon - 0.42), color: mix(pal.skyTop, pal.skyBot, 0.38) },
+        { offset: Math.max(0.1, horizon - 0.18), color: mix(pal.skyTop, pal.skyBot, 0.74) },
+        { offset: horizon - 0.05, color: pal.skyBot },
+        { offset: horizon, color: mix(pal.skyBot, pal.glow, 0.45) },
+        { offset: Math.min(0.985, horizon + 0.05), color: mix(pal.glow, pal.sand, 0.5) },
+        { offset: 1, color: mix(pal.sand, pal.sandDeep, 0.35) },
       ],
     });
     skyG.rect(0, 0, W, H).fill(grad);
 
-    // Warm horizon glow band (the "sunrise/sunset" bloom), strongest low in the sky.
+    // Soft horizon glow band (the "sunrise/sunset" bloom) — kept pale + diffuse.
     const glow = new FillGradient({
       type: "linear",
       start: { x: 0, y: 0 },
       end: { x: 0, y: 1 },
       colorStops: [
-        { offset: Math.max(0, horizon - 0.18), color: pal.glow },
-        { offset: horizon, color: pal.glow },
-        { offset: horizon + 0.08, color: pal.glow },
+        { offset: 0, color: mix(pal.glow, pal.skyBot, 0.5) },
+        { offset: 0.5, color: pal.glow },
+        { offset: 1, color: mix(pal.glow, pal.sand, 0.5) },
       ],
     });
-    skyG.rect(0, H * (horizon - 0.18), W, H * 0.26).fill({ fill: glow, alpha: night ? 0.18 : 0.5 });
+    skyG.rect(0, H * (horizon - 0.2), W, H * 0.3).fill({ fill: glow, alpha: night ? 0.16 : 0.38 });
 
     // sun + moon position/visibility
     const sp = sunPos(hour, W, H);
@@ -266,11 +333,13 @@ export async function mountWorldPixi(
 
     sunG.clear();
     if (sp.up) {
-      const R = Math.round(H * 0.055);
-      sunG.circle(0, 0, R * 3.2).fill({ color: pal.sun, alpha: 0.1 });
-      sunG.circle(0, 0, R * 2).fill({ color: pal.sun, alpha: 0.18 });
-      sunG.circle(0, 0, R).fill({ color: pal.sun });
-      sunG.circle(0, 0, R * 0.66).fill({ color: pal.sunCore });
+      // A big, soft, pale sun like the reference — wide diffuse halo, gentle core.
+      const R = Math.round(H * 0.085);
+      sunG.circle(0, 0, R * 2.6).fill({ color: pal.sun, alpha: 0.08 });
+      sunG.circle(0, 0, R * 1.7).fill({ color: pal.sun, alpha: 0.14 });
+      sunG.circle(0, 0, R * 1.15).fill({ color: pal.sun, alpha: 0.5 });
+      sunG.circle(0, 0, R).fill({ color: mix(pal.sun, pal.sunCore, 0.6) });
+      sunG.circle(0, 0, R * 0.82).fill({ color: pal.sunCore });
       sunG.x = sp.x;
       sunG.y = sp.y;
       sunG.visible = true;
@@ -293,15 +362,52 @@ export async function mountWorldPixi(
     }
   }
 
-  // Re-tint every land/plant sprite for the current palette.
+  // The soft, pale dusty-rose/mauve a formation tints to at zero haze. Built from
+  // the palette's land colours but deliberately desaturated toward the sand so
+  // daytime stays GENTLE (pastel) rather than golden/orange.
+  function formationBase(): number {
+    return mix(mix(pal.landMid, pal.landFar, 0.52), pal.sand, 0.34);
+  }
+
+  // Re-tint every formation/plant/critter sprite for the current palette.
+  // Formations apply atmospheric perspective: each is blended from its base tint
+  // toward the haze (sky) colour by its own `haze`, plus a small `jitter` nudge.
   function retint() {
     if (destroyed) return;
+    const base = formationBase();
+    const haze = hazeColor();
+    const inkTint = mix(pal.ink, pal.landMid, 0.12);
+    if (groundG) groundG.tint = mix(pal.sand, pal.sandDeep, 0.4);
     for (const t of tintables) {
-      if (t.role === "land") t.s.tint = pal.landMid;
-      else if (t.role === "far") t.s.tint = mix(pal.landFar, pal.skyBot, 0.35);
-      else if (t.role === "plant") t.s.tint = mix(pal.plant, pal.sage, 0.4);
-      else t.s.tint = mix(pal.ink, pal.landMid, 0.18);
+      if (t.role === "formation") {
+        // jitter shifts slightly cooler (toward landFar) or warmer (toward hill)
+        const warm = t.jitter >= 0;
+        const nudge = warm
+          ? mix(base, pal.hill, Math.min(0.3, t.jitter))
+          : mix(base, pal.landFar, Math.min(0.3, -t.jitter));
+        t.s.tint = mix(nudge, haze, t.haze);
+      } else if (t.role === "plant") {
+        t.s.tint = mix(pal.plant, pal.sage, 0.4);
+      } else {
+        // critters: keep them as ink outlines, barely shifted by time of day
+        t.s.tint = inkTint;
+      }
     }
+  }
+
+  // ---- formation deck: deterministic, varied, no adjacent repeats ----------
+  // A small stateful picker over the formation pool seeded per build.
+  function makePicker(r: () => number) {
+    let prev = -1;
+    const pool = FORMATIONS;
+    return (): FormationKey => {
+      let pick = Math.floor(r() * pool.length);
+      if (pick === prev) pick = (pick + 1) % pool.length;
+      // a second nudge for runs of 3 so we don't ping-pong between two types
+      if (pick === prev) pick = (pick + 2) % pool.length;
+      prev = pick;
+      return pool[pick];
+    };
   }
 
   // ---- build the full scene from current layout + palette ------------------
@@ -319,9 +425,11 @@ export async function mountWorldPixi(
     dust = [];
     bird = null;
     tumble = null;
+    groundG = null;
 
     const { W, H, HZ, stationStep, maxScroll, N } = core.layout;
     const localW = (factor: number) => Math.ceil(maxScroll * factor + W + 200);
+    const groundSpan = H - HZ; // pixels of sand below the horizon
 
     // ---- SKY (own layer at factor 0; never scrolls) ----
     const Lsky = addLayer(0);
@@ -331,75 +439,104 @@ export async function mountWorldPixi(
     Lsky.c.addChild(skyG, sunG, moonG);
     drawSky();
 
-    // ---- FAR RANGE — tiled hazily along the horizon ----
+    // ---- FAR SKYLINE — several SMALL hazed instances with gaps (no tiling) ----
+    // A believable distant ridge: a varied mix of the `range` asset and small
+    // formations, each at its own scale/flip, heavily hazed toward the sky, sat
+    // right on the horizon with breathing room between them.
     {
-      const L = addLayer(0.12);
-      const lw = localW(0.12);
-      const tileW = Math.min(W * 0.9, 760);
-      const baseY = HZ + H * 0.01;
-      const n = Math.ceil(lw / (tileW * 0.82)) + 1;
-      for (let i = 0; i < n; i++) {
-        const x = i * tileW * 0.82;
-        const s = placeSprite(L, "range", x, baseY, tileW, "far", { alpha: 0.82 });
-        s.y += (i % 2) * 6;
+      const L = addLayer(0.1);
+      const lw = localW(0.1);
+      const r = rnd(31);
+      const pick = makePicker(r);
+      const baseY = HZ + groundSpan * 0.015;
+      let x = -W * 0.1;
+      while (x < lw + W * 0.1) {
+        const useRange = r() < 0.45;
+        if (useRange) {
+          // a short slice of the range asset as a low distant ridge
+          const targetH = groundSpan * (0.07 + r() * 0.05);
+          placeFormation(L, RANGE, x, baseY, targetH, 0.78 + r() * 0.12, (r() - 0.5) * 0.3, {
+            alpha: 0.55 + r() * 0.12,
+            flip: r() > 0.5,
+          });
+          x += (340 + r() * 320) * (W / 1200);
+        } else {
+          const targetH = groundSpan * (0.1 + r() * 0.08);
+          placeFormation(L, pick(), x, baseY, targetH, 0.7 + r() * 0.12, (r() - 0.5) * 0.4, {
+            alpha: 0.55 + r() * 0.14,
+            flip: r() > 0.5,
+          });
+          x += (190 + r() * 240) * (W / 1200);
+        }
+        // occasional larger gap so the ridge doesn't read as evenly spaced
+        if (r() < 0.22) x += (160 + r() * 220) * (W / 1200);
       }
       if (!coarse) L.c.filters = [new BlurFilter({ strength: 2 })];
     }
 
-    // ---- MID FORMATIONS — varied per region, no repeat adjacent ----
+    // ---- DISTANT formations — small, hazy, slow parallax ----
     {
-      const L = addLayer(0.26);
-      const lw = localW(0.26);
-      const baseY = HZ + H * 0.07;
-      const r = rnd(41);
-      const pool: AssetKey[] = ["mesa", "butte", "arch", "spires"];
-      let prev = -1;
-      const step = Math.max(360, W * 0.42);
-      for (let x = step * 0.5, i = 0; x < lw; x += step * (0.7 + r() * 0.6), i++) {
-        let pick = Math.floor(r() * pool.length);
-        if (pick === prev) pick = (pick + 1) % pool.length;
-        prev = pick;
-        const key = pool[pick];
-        const w = (220 + r() * 200) * (key === "spires" ? 0.8 : 1);
-        placeSprite(L, key, x + (r() - 0.5) * 60, baseY + (r() - 0.5) * 12, w, "far", {
-          alpha: 0.9,
-          flip: r() > 0.5,
-        });
+      const L = addLayer(0.2);
+      const lw = localW(0.2);
+      const r = rnd(43);
+      const pick = makePicker(r);
+      const baseY = HZ + groundSpan * 0.06;
+      const step = Math.max(300, W * 0.34);
+      for (let x = step * 0.4; x < lw; x += step * (0.7 + r() * 0.7)) {
+        const targetH = groundSpan * (0.18 + r() * 0.1);
+        placeFormation(L, pick(), x + (r() - 0.5) * 60, baseY + (r() - 0.5) * 10, targetH,
+          0.4 + r() * 0.18, (r() - 0.5) * 0.6, { alpha: 0.78 + r() * 0.12, flip: r() > 0.5 });
       }
+      if (!coarse) L.c.filters = [new BlurFilter({ strength: 0.8 })];
     }
 
-    // ---- HERO FORMATIONS — big, near each station, with variety ----
+    // ---- MID formations — medium, light haze, medium parallax ----
     {
-      const L = addLayer(0.46);
-      const r = rnd(59);
-      const groundY = HZ + H * 0.17;
-      const heroPool: AssetKey[] = ["mesa", "arch", "spires", "butte", "boulders"];
-      let prev = -1;
-      for (let i = 0; i < N + 1; i++) {
-        // 1–2 hero formations clustered around each station, never repeating type
-        const count = 1 + (r() > 0.55 ? 1 : 0);
+      const L = addLayer(0.34);
+      const lw = localW(0.34);
+      const r = rnd(53);
+      const pick = makePicker(r);
+      const baseY = HZ + groundSpan * 0.14;
+      const step = Math.max(420, W * 0.46);
+      for (let x = step * 0.3; x < lw; x += step * (0.7 + r() * 0.6)) {
+        // sometimes a tight pair (e.g. twins-like grouping of different types)
+        const count = r() < 0.28 ? 2 : 1;
         for (let j = 0; j < count; j++) {
-          let pick = Math.floor(r() * heroPool.length);
-          if (pick === prev) pick = (pick + 1) % heroPool.length;
-          prev = pick;
-          const key = heroPool[pick];
-          const x = i * stationStep + (r() - 0.5) * stationStep * 0.5;
-          const w =
-            (key === "boulders" ? 260 : 420) * (0.78 + r() * 0.5);
-          placeSprite(L, key, x, groundY, w, "land", { flip: r() > 0.5, alpha: 0.98 });
+          const targetH = groundSpan * (0.3 + r() * 0.16);
+          placeFormation(L, pick(), x + j * (110 + r() * 60), baseY + (r() - 0.5) * 14, targetH,
+            0.16 + r() * 0.14, (r() - 0.5) * 0.8, { alpha: 0.94, flip: r() > 0.5 });
         }
       }
     }
 
-    // ---- NEAR GROUND band (sand) — a simple tinted ridge under the foreground ----
+    // ---- HERO formations — big, saturated, near each station, fast parallax ----
+    {
+      const L = addLayer(0.5);
+      const r = rnd(61);
+      const pick = makePicker(r);
+      const groundY = HZ + groundSpan * 0.28;
+      for (let i = 0; i < N + 1; i++) {
+        const count = 1 + (r() > 0.55 ? 1 : 0);
+        for (let j = 0; j < count; j++) {
+          const targetH = groundSpan * (0.52 + r() * 0.28);
+          const x = i * stationStep + (r() - 0.5) * stationStep * 0.55;
+          placeFormation(L, pick(), x, groundY, targetH, r() * 0.08, (r() - 0.5) * 1, {
+            alpha: 0.99,
+            flip: r() > 0.5,
+          });
+        }
+      }
+    }
+
+    // ---- NEAR GROUND band (sand) — a soft tinted ridge under the foreground ----
     {
       const L = addLayer(0.62);
       const lw = localW(0.62);
       const g = new Graphics();
       const r = rnd(83);
       const seg = Math.max(8, Math.round(lw / 220));
-      const baseY = HZ + H * 0.26;
-      const amp = H * 0.02;
+      const baseY = HZ + groundSpan * 0.42;
+      const amp = groundSpan * 0.04;
       g.moveTo(0, H);
       g.lineTo(0, baseY);
       for (let i = 0; i <= seg; i++) {
@@ -409,56 +546,52 @@ export async function mountWorldPixi(
       }
       g.lineTo(lw, H);
       g.lineTo(0, H);
-      g.fill({ color: mix(pal.sand, pal.sandDeep, 0.4) });
+      g.fill({ color: 0xffffff });
+      g.tint = mix(pal.sand, pal.sandDeep, 0.4);
       L.c.addChild(g);
+      groundG = g;
     }
 
-    // ---- PLANTS (saguaro / agave / grass) — sway about base; scatter across ----
+    // ---- PLANTS (saguaro / agave / cottongrass) — sway about base ----
     {
       const L = addLayer(0.84);
       const lw = localW(0.84);
       const r = rnd(91);
-      const plantPool: AssetKey[] = ["saguaro", "agave", "grass", "agave", "grass"];
-      const count = Math.round(lw / 240);
+      const plantPool: AssetKey[] = ["saguaro", "agave", "cottongrass", "agave", "cottongrass"];
+      const count = Math.round(lw / 260);
       for (let i = 0; i < count; i++) {
         const x = lw * ((i + r() * 0.85) / count);
         const key = plantPool[Math.floor(r() * plantPool.length)];
-        const baseY = H - 8 - r() * H * 0.16;
+        const baseY = H - 8 - r() * groundSpan * 0.28;
         const w =
-          key === "saguaro" ? 70 + r() * 60 : key === "agave" ? 70 + r() * 50 : 90 + r() * 70;
-        const s = placeSprite(L, key, x, baseY, w, "plant", { flip: r() > 0.5 });
+          key === "saguaro" ? 54 + r() * 46 : key === "agave" ? 76 + r() * 54 : 50 + r() * 40;
+        const s = placeByWidth(L, key, x, baseY, w, "plant", { flip: r() > 0.5 });
         // sway pivots near the base: nudge the anchor up so rotation looks rooted
-        s.anchor.set(0.5, 0.96);
-        swayers.push({ s, amp: 0.015 + r() * 0.03, sp: 0.5 + r() * 0.7, ph: r() * 6.28 });
+        s.anchor.set(0.5, 0.97);
+        swayers.push({ s, amp: 0.012 + r() * 0.026, sp: 0.5 + r() * 0.7, ph: r() * 6.28 });
       }
     }
 
     // ---- CONTENT PANELS (DOM) — above the canvas, parallaxed by worldCore ----
     core.buildPanels(panelHolder);
 
-    // ---- NEAR FOREGROUND CRITTERS + boulders ----
+    // ---- NEAR FOREGROUND CRITTERS ----
     {
       const L = addLayer(1.0);
       const lw = localW(1.0);
       const r = rnd(97);
-
-      // a few foreground boulders for depth
-      for (let i = 0; i < N + 1; i++) {
-        const x = i * stationStep + (r() - 0.5) * stationStep * 0.4;
-        placeSprite(L, "boulders", x, H - 4, 150 + r() * 120, "land", { flip: r() > 0.5, alpha: 0.96 });
-      }
 
       // roadrunners & lizards wander the foreground
       const groundCritters: AssetKey[] = ["roadrunner", "lizard", "roadrunner", "lizard"];
       const nWander = 5;
       for (let i = 0; i < nWander; i++) {
         const key = groundCritters[i % groundCritters.length];
-        const sc = key === "lizard" ? 0.36 + r() * 0.14 : 0.42 + r() * 0.16;
-        const baseY = H - 12 - r() * H * 0.14;
+        const sc = key === "lizard" ? 0.18 + r() * 0.08 : 0.34 + r() * 0.14;
+        const baseY = H - 12 - r() * groundSpan * 0.22;
         const min = (i / nWander) * lw + 40;
         const max = ((i + 1) / nWander) * lw - 40;
         const x = min + (max - min) * r();
-        const s = placeSprite(L, key, x, baseY, textures[key].width * sc, "ink", {
+        const s = placeByWidth(L, key, x, baseY, textures[key].width * sc, "ink", {
           flip: r() > 0.5,
         });
         s.anchor.set(0.5, 1);
@@ -481,10 +614,10 @@ export async function mountWorldPixi(
 
       // jackrabbits hop periodically
       for (let i = 0; i < 2; i++) {
-        const sc = 0.34 + r() * 0.12;
+        const sc = 0.16 + r() * 0.07;
         const baseX = (i + 0.5) * (lw / 2) + (r() - 0.5) * 300;
-        const baseY = H - 16 - r() * H * 0.1;
-        const s = placeSprite(L, "jackrabbit", baseX, baseY, textures.jackrabbit.width * sc, "ink", {
+        const baseY = H - 16 - r() * groundSpan * 0.16;
+        const s = placeByWidth(L, "jackrabbit", baseX, baseY, textures.jackrabbit.width * sc, "ink", {
           flip: r() > 0.5,
         });
         s.anchor.set(0.5, 1);
@@ -506,8 +639,8 @@ export async function mountWorldPixi(
     // ---- BIRD flying across the sky (own slow layer) ----
     {
       const L = addLayer(0.2);
-      const sc = 0.5;
-      const s = placeSprite(L, "bird", 0, 0, textures.bird.width * sc, "ink", {});
+      const sc = 0.32;
+      const s = placeByWidth(L, "bird", 0, 0, textures.bird.width * sc, "ink", {});
       s.anchor.set(0.5, 0.5);
       s.tint = mix(pal.ink, pal.skyTop, 0.25);
       bird = { s, x: -200, y0: H * (0.18 + Math.random() * 0.12), speed: 60 + Math.random() * 30, span: W + 400 };
@@ -516,9 +649,10 @@ export async function mountWorldPixi(
     // ---- TUMBLEWEED rolling across the foreground ----
     {
       const L = addLayer(1.0);
-      const sc = 0.3;
-      const s = placeSprite(L, "tumbleweed", -100, H - 30, textures.tumbleweed.width * sc, "plant", {});
+      const sc = 0.22;
+      const s = placeByWidth(L, "tumbleweed", -100, H - 30, textures.tumbleweed.width * sc, "plant", {});
       s.anchor.set(0.5, 0.5);
+      s.tint = mix(pal.rock, pal.sand, 0.45);
       tumble = { s, x: -100, y: H - 40, speed: 90 + Math.random() * 50, spin: 3 + Math.random() * 2, sc };
     }
 
@@ -532,7 +666,7 @@ export async function mountWorldPixi(
         const x = lw * (i / count) + r() * 70;
         const y = H * (0.12 + r() * 0.5);
         const g = new Graphics();
-        g.circle(0, 0, 0.8 + r() * 1.6).fill({ color: pal.inkSoft, alpha: 0.1 + r() * 0.16 });
+        g.circle(0, 0, 0.8 + r() * 1.6).fill({ color: pal.inkSoft, alpha: 0.08 + r() * 0.12 });
         g.x = x;
         g.y = y;
         L.c.addChild(g);
@@ -625,7 +759,7 @@ export async function mountWorldPixi(
       bird.s.x = bird.x;
       bird.s.y = bird.y0 + Math.sin(time * 1.6) * 10;
       // gentle wing-flap via vertical squash
-      bird.s.scale.y = (0.5) * (0.9 + Math.abs(Math.sin(time * 7)) * 0.2);
+      bird.s.scale.y = 0.32 * (0.9 + Math.abs(Math.sin(time * 7)) * 0.2);
     }
 
     // tumbleweed rolls + spins across the foreground, respawning
@@ -712,6 +846,7 @@ export async function mountWorldPixi(
       drawSky();
       retint();
       if (bird) bird.s.tint = mix(pal.ink, pal.skyTop, 0.25);
+      if (tumble) tumble.s.tint = mix(pal.rock, pal.sand, 0.45);
       if (timeLbl) timeLbl.textContent = fmt(min);
       if (slider) slider.value = String(min);
       if (manual) store(String(min));
@@ -740,6 +875,12 @@ export async function mountWorldPixi(
   setupCustomize(); // applies the stored/local hour → sky + tints
   const detachInput = core.bindInput(stage, onResize);
   app.ticker.add(onTick);
+
+  // Dev-only debug handle so a headless screenshot can pause the ticker and use
+  // Pixi's extractor for a deterministic capture. Stripped from production builds.
+  if (import.meta.env.DEV) {
+    (window as unknown as { __pixiApp?: Application }).__pixiApp = app;
+  }
 
   // ---- teardown ------------------------------------------------------------
   return function destroy() {
